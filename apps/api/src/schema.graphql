@@ -89,12 +89,19 @@ type AuthPayload {
   user: User!
 }
 
+enum SortOrder {
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+  PRIORITY_DESC
+}
+
 type Query {
   tickets(
     status: TicketStatus
     priority: Priority
     assigneeId: ID
     slaState: SLAState
+    orderBy: SortOrder
     take: Int
     cursor: String
   ): TicketConnection!
