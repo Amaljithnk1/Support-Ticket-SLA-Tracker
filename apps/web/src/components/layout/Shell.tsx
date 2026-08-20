@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Ticket, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { CommandPalette } from '../ui/CommandPalette';
 
 export function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -18,6 +19,7 @@ export function Shell() {
 
   return (
     <div className="flex h-screen bg-background text-zinc-300 overflow-hidden">
+      <CommandPalette />
       {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 border-r border-white/10 bg-surface/50 flex flex-col">
         <div className="h-14 flex items-center px-4 border-b border-white/10">

@@ -11,8 +11,8 @@
     "argon2": "^0.40.1",
     "jsonwebtoken": "^9.0.2",
     "dataloader": "^2.2.2",
-    "@sla-tracker/database": "workspace:*",
-    "@sla-tracker/sla-engine": "workspace:*"
+    "@sla-tracker/database": "*",
+    "@sla-tracker/sla-engine": "*"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.5",

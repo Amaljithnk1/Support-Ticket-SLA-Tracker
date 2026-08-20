@@ -8,7 +8,7 @@ import { SLA_POLICIES } from '@sla-tracker/sla-engine/dist/config'; // Might nee
 export const resolvers = {
   Query: {
     tickets: async (_: any, args: any, context: any) => {
-      const { status, priority, assigneeId, slaState, take = 10, cursor } = args;
+      const { status, priority, assigneeId, slaState, orderBy, take = 10, cursor } = args;
       const prisma = context.prisma as PrismaClient;
       
       const where: any = {};
@@ -16,9 +16,14 @@ export const resolvers = {
       if (priority) where.priority = priority;
       if (assigneeId) where.assigneeId = assigneeId;
 
+      let dbOrderBy: any = { createdAt: 'desc' };
+      if (orderBy === 'CREATED_AT_ASC') dbOrderBy = { createdAt: 'asc' };
+      if (orderBy === 'CREATED_AT_DESC') dbOrderBy = { createdAt: 'desc' };
+      if (orderBy === 'PRIORITY_DESC') dbOrderBy = { priority: 'desc' };
+
       // If we are not filtering by SLA State, we can just use pure DB pagination.
       if (!slaState) {
-        const queryArgs: any = { where, take: take + 1, orderBy: { createdAt: 'desc' } };
+        const queryArgs: any = { where, take: take + 1, orderBy: dbOrderBy };
         if (cursor) {
           queryArgs.cursor = { id: cursor };
           queryArgs.skip = 1; // skip the cursor itself
@@ -39,7 +44,7 @@ export const resolvers = {
       // If we ARE filtering by SLA state, we must over-fetch and filter in memory.
       // We will over-fetch up to take * 5 (Known limitation documented in README).
       const MAX_OVERFETCH = take * 5;
-      const queryArgs: any = { where, take: MAX_OVERFETCH, orderBy: { createdAt: 'desc' } };
+      const queryArgs: any = { where, take: MAX_OVERFETCH, orderBy: dbOrderBy };
       if (cursor) {
         queryArgs.cursor = { id: cursor };
         queryArgs.skip = 1;
