@@ -1,4 +1,4 @@
-import * as argon2 from 'argon2';
+import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AppError, ErrorCode } from '../errors';
@@ -11,7 +11,7 @@ export async function register(prisma: PrismaClient, args: any) {
     throw new AppError('Email already in use', ErrorCode.VALIDATION_ERROR);
   }
 
-  const passwordHash = await argon2.hash(args.password);
+  const passwordHash = await bcrypt.hash(args.password, 10);
   
   const user = await prisma.user.create({
     data: {
@@ -32,7 +32,7 @@ export async function login(prisma: PrismaClient, args: any) {
     throw new AppError('Invalid email or password', ErrorCode.USER_NOT_FOUND);
   }
 
-  const valid = await argon2.verify(user.passwordHash, args.password);
+  const valid = await bcrypt.compare(args.password, user.passwordHash);
   if (!valid) {
     throw new AppError('Invalid email or password', ErrorCode.UNAUTHORIZED);
   }
