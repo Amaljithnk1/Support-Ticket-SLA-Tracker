@@ -8,7 +8,7 @@
   "dependencies": {
     "graphql": "^16.8.1",
     "graphql-yoga": "^5.1.1",
-    "argon2": "^0.40.1",
+    "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "dataloader": "^2.2.2",
     "@sla-tracker/database": "*",
