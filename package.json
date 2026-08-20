@@ -1,0 +1,19 @@
+{
+  "name": "support-ticket-sla-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun --cwd apps/api dev & bun --cwd apps/web dev",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.0.3",
+    "typescript": "^5.0.0"
+  }
+}
