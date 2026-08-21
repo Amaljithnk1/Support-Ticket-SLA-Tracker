@@ -2,13 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Command } from 'cmdk';
 import { useMutation } from 'urql';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useMatch } from 'react-router-dom';
+import { CustomSelect } from './CustomSelect';
 
 const CREATE_TICKET_MUTATION = `
   mutation CreateTicket($title: String!, $description: String!, $priority: Priority!) {
     createTicket(title: $title, description: $description, priority: $priority) {
       id
       title
+    }
+  }
+`;
+
+const CHANGE_STATUS_MUTATION = `
+  mutation ChangeTicketStatus($ticketId: ID!, $status: TicketStatus!) {
+    changeTicketStatus(ticketId: $ticketId, status: $status) {
+      id
+      status
     }
   }
 `;
@@ -21,10 +31,19 @@ export function CommandPalette() {
   const [priority, setPriority] = useState('MEDIUM');
   
   const [, createTicket] = useMutation(CREATE_TICKET_MUTATION);
+  const [, changeStatus] = useMutation(CHANGE_STATUS_MUTATION);
   const navigate = useNavigate();
+  
+  const match = useMatch('/tickets/:id');
+  const activeTicketId = match?.params.id;
+
+  // Read user role from local storage to conditionally show Agent actions
+  const userStr = localStorage.getItem('user');
+  const userRole = userStr ? JSON.parse(userStr).role : 'REPORTER';
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      // Listen for both Ctrl+K and Cmd+K securely across OS
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setOpen((open) => !open);
@@ -51,6 +70,24 @@ export function CommandPalette() {
     }
   };
 
+  const handleStatusChange = async (status: string) => {
+    if (!activeTicketId) return;
+    setOpen(false);
+    const toastId = toast.loading(`Changing status to ${status}...`);
+    const result = await changeStatus({ ticketId: activeTicketId, status });
+    
+    if (result.error) {
+      toast.error(`Failed to change status: ${result.error.message}`, { id: toastId });
+    } else {
+      toast.success(`Ticket marked as ${status}`, { id: toastId });
+    }
+  };
+
+  const navigateTo = (path: string) => {
+    setOpen(false);
+    navigate(path);
+  };
+
   return (
     <Command.Dialog 
       open={open} 
@@ -58,7 +95,7 @@ export function CommandPalette() {
       label="Global Command Menu"
       className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-background/80 backdrop-blur-sm"
     >
-      <div className="w-full max-w-xl bg-surface border border-white/10 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-xl bg-surface border border-white/10 rounded-xl shadow-2xl overflow-visible flex flex-col">
         {view === 'main' ? (
           <>
             <Command.Input 
@@ -69,7 +106,7 @@ export function CommandPalette() {
             <Command.List className="max-h-[300px] overflow-y-auto p-2">
               <Command.Empty className="p-4 text-sm text-zinc-500 text-center">No results found.</Command.Empty>
               
-              <Command.Group heading="Actions" className="px-2 py-2 text-xs font-medium text-zinc-500">
+              <Command.Group heading="Navigation & Actions" className="px-2 py-2 text-xs font-medium text-zinc-500">
                 <Command.Item 
                   onSelect={() => setView('create')}
                   className="px-3 py-2 text-sm text-zinc-300 rounded cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 aria-selected:text-white flex items-center gap-2"
@@ -77,12 +114,35 @@ export function CommandPalette() {
                   Create New Ticket
                 </Command.Item>
                 <Command.Item 
-                  onSelect={() => navigate('/dashboard')}
+                  onSelect={() => navigateTo('/dashboard')}
                   className="px-3 py-2 text-sm text-zinc-300 rounded cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 aria-selected:text-white flex items-center gap-2"
                 >
                   Go to Dashboard
                 </Command.Item>
+                <Command.Item 
+                  onSelect={() => navigateTo('/tickets')}
+                  className="px-3 py-2 text-sm text-zinc-300 rounded cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 aria-selected:text-white flex items-center gap-2"
+                >
+                  Go to Tickets List
+                </Command.Item>
               </Command.Group>
+
+              {activeTicketId && userRole === 'AGENT' && (
+                <Command.Group heading="Active Ticket (Agent)" className="px-2 py-2 text-xs font-medium text-zinc-500">
+                  <Command.Item 
+                    onSelect={() => handleStatusChange('IN_PROGRESS')}
+                    className="px-3 py-2 text-sm text-zinc-300 rounded cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 aria-selected:text-white flex items-center gap-2"
+                  >
+                    Set Active Ticket to In Progress
+                  </Command.Item>
+                  <Command.Item 
+                    onSelect={() => handleStatusChange('RESOLVED')}
+                    className="px-3 py-2 text-sm text-zinc-300 rounded cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 aria-selected:text-white flex items-center gap-2"
+                  >
+                    Resolve Active Ticket
+                  </Command.Item>
+                </Command.Group>
+              )}
             </Command.List>
           </>
         ) : (
@@ -101,16 +161,18 @@ export function CommandPalette() {
               onChange={(e) => setDescription(e.target.value)}
               className="w-full bg-black/20 border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-brand h-24 resize-none"
             />
-            <select 
+            
+            <CustomSelect 
               value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              className="w-full bg-black/20 border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-brand"
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-              <option value="URGENT">Urgent</option>
-            </select>
+              onChange={setPriority}
+              options={[
+                { value: 'LOW', label: 'Low Priority' },
+                { value: 'MEDIUM', label: 'Medium Priority' },
+                { value: 'HIGH', label: 'High Priority' },
+                { value: 'URGENT', label: 'Urgent Priority' }
+              ]}
+            />
+            
             <div className="flex justify-end gap-2 mt-2">
               <button 
                 onClick={() => setView('main')}

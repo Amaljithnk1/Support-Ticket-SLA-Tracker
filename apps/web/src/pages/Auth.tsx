@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation } from 'urql';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { CustomSelect } from '../components/ui/CustomSelect';
 
 const LOGIN_MUTATION = `
   mutation Login($email: String!, $password: String!) {
@@ -35,7 +35,6 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('REPORTER');
-  const navigate = useNavigate();
 
   const [, login] = useMutation(LOGIN_MUTATION);
   const [, register] = useMutation(REGISTER_MUTATION);
@@ -59,7 +58,6 @@ export default function Auth() {
       localStorage.setItem('user', JSON.stringify(payload.user));
       
       toast.success('Successfully authenticated!', { id: loadingToast });
-      // Force a reload to ensure URQL client picks up the new token immediately
       window.location.href = '/tickets';
     } catch (err) {
       toast.error('An unexpected error occurred', { id: loadingToast });
@@ -113,14 +111,14 @@ export default function Auth() {
           {!isLogin && (
             <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1">Role</label>
-              <select 
+              <CustomSelect 
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full bg-black/20 border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-              >
-                <option value="REPORTER">Reporter (Can create tickets)</option>
-                <option value="AGENT">Agent (Can resolve & assign tickets)</option>
-              </select>
+                onChange={setRole}
+                options={[
+                  { value: 'REPORTER', label: 'Reporter (Can create tickets)' },
+                  { value: 'AGENT', label: 'Agent (Can resolve & assign tickets)' }
+                ]}
+              />
             </div>
           )}
 
@@ -134,6 +132,7 @@ export default function Auth() {
 
         <div className="mt-6 text-center">
           <button 
+            type="button"
             onClick={() => setIsLogin(!isLogin)}
             className="text-xs text-zinc-400 hover:text-white transition-colors"
           >
