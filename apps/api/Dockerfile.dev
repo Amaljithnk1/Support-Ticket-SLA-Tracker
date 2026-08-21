@@ -1,0 +1,22 @@
+FROM oven/bun:1 AS base
+WORKDIR /app
+
+# Prisma's CLI requires Node.js internally even in a Bun environment,
+# or `prisma generate` hangs silently with no error.
+RUN apt-get update && apt-get install -y curl ca-certificates openssl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy workspace manifests first for better layer caching
+COPY package.json bun.lockb* ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/database/package.json ./packages/database/
+COPY packages/sla-engine/package.json ./packages/sla-engine/
+
+RUN bun install
+
+# Source gets mounted as a volume in dev, not copied here — see docker-compose.yml
+EXPOSE 4000
+
+CMD ["bun", "run", "--cwd", "apps/api", "dev"]

@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: sla_postgres
     environment:
       POSTGRES_USER: root
@@ -17,6 +15,24 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    container_name: sla_api
+    environment:
+      DATABASE_URL: "postgresql://root:password123@postgres:5432/sla_tracker?schema=public"
+      JWT_SECRET: "super-secret-jwt-key-change-in-production"
+      BUSINESS_TIMEZONE: "Asia/Kolkata"
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:

@@ -13,11 +13,12 @@
     "seed": "bun run prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.10.2"
+    "@prisma/client": "^5.10.2",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "prisma": "^5.10.2",
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "typescript": "^5.0.0"
   }
 }
