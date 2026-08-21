@@ -99,19 +99,21 @@ export function CommandPalette() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
-      {/* Background Overlay */}
-      <div 
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-        onClick={() => setOpen(false)}
-      />
+    <>
+      {open && (
+        <div 
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        />
+      )}
       
       <Command.Dialog 
         open={open} 
         onOpenChange={setOpen}
         label="Global Command Menu"
-        className="relative w-full max-w-xl bg-surface border border-white/10 rounded-xl shadow-2xl overflow-visible flex flex-col"
+        className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] pointer-events-none"
       >
+        <div className="relative w-full max-w-xl bg-surface border border-white/10 rounded-xl shadow-2xl overflow-visible flex flex-col pointer-events-auto">
         {view === 'main' ? (
           <>
             <Command.Input 
@@ -208,7 +210,8 @@ export function CommandPalette() {
             </div>
           </div>
         )}
+        </div>
       </Command.Dialog>
-    </div>
+    </>
   );
 }
