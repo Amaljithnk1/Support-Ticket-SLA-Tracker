@@ -3,7 +3,7 @@ import { requireAuth, requireRole } from './services/authzService';
 import * as authService from './services/authService';
 import * as ticketService from './services/ticketService';
 import { calculateSlaState, getElapsedBusinessMinutes } from '@sla-tracker/sla-engine';
-import { SLA_POLICIES } from '@sla-tracker/sla-engine/dist/config'; // Might need adjusting based on how it's built
+import { SLA_POLICIES } from '@sla-tracker/sla-engine';
 
 export const resolvers = {
   Query: {

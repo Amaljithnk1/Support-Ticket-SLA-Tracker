@@ -1,7 +1,7 @@
 import { PrismaClient, TicketStatus, Priority, UserRole } from '@prisma/client';
 import { AppError, ErrorCode } from '../errors';
 import { calculateSlaTargets, calculateSlaState, getElapsedBusinessMinutes } from '@sla-tracker/sla-engine';
-import { SLA_POLICIES } from '@sla-tracker/sla-engine/dist/config'; // Adjust if needed
+import { SLA_POLICIES } from '@sla-tracker/sla-engine';
 
 export async function createTicket(prisma: PrismaClient, args: any, reporterId: string) {
   if (!args.title || args.title.trim() === '') {
