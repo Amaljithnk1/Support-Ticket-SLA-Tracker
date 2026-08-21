@@ -49,8 +49,18 @@ export function CommandPalette() {
         setOpen((open) => !open);
       }
     };
+    
+    const handleOpenCreate = () => {
+      setOpen(true);
+      setView('create');
+    };
+
     document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
+    document.addEventListener('open-create-ticket', handleOpenCreate);
+    return () => {
+      document.removeEventListener('keydown', down);
+      document.removeEventListener('open-create-ticket', handleOpenCreate);
+    };
   }, []);
 
   const handleCreate = async () => {

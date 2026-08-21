@@ -57,13 +57,7 @@ export default function TicketList() {
   const navigate = useNavigate();
 
   const handleNewTicket = () => {
-    // Standardize ctrl/cmd key firing for the event listener
-    const isMac = navigator.platform.toLowerCase().includes('mac');
-    document.dispatchEvent(new KeyboardEvent('keydown', { 
-      key: 'k', 
-      ctrlKey: !isMac,
-      metaKey: isMac 
-    }));
+    document.dispatchEvent(new CustomEvent('open-create-ticket'));
   };
 
   const tickets = data?.tickets?.nodes || [];
