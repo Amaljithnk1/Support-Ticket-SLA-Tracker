@@ -99,13 +99,19 @@ export function CommandPalette() {
   };
 
   return (
-    <Command.Dialog 
-      open={open} 
-      onOpenChange={setOpen}
-      label="Global Command Menu"
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-background/80 backdrop-blur-sm"
-    >
-      <div className="w-full max-w-xl bg-surface border border-white/10 rounded-xl shadow-2xl overflow-visible flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
+      {/* Background Overlay */}
+      <div 
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+        onClick={() => setOpen(false)}
+      />
+      
+      <Command.Dialog 
+        open={open} 
+        onOpenChange={setOpen}
+        label="Global Command Menu"
+        className="relative w-full max-w-xl bg-surface border border-white/10 rounded-xl shadow-2xl overflow-visible flex flex-col"
+      >
         {view === 'main' ? (
           <>
             <Command.Input 
@@ -185,7 +191,10 @@ export function CommandPalette() {
             
             <div className="flex justify-end gap-2 mt-2">
               <button 
-                onClick={() => setView('main')}
+                onClick={() => {
+                  setOpen(false);
+                  setView('main');
+                }}
                 className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
               >
                 Cancel
@@ -199,7 +208,7 @@ export function CommandPalette() {
             </div>
           </div>
         )}
-      </div>
-    </Command.Dialog>
+      </Command.Dialog>
+    </div>
   );
 }
