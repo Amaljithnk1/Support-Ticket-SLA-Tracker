@@ -138,6 +138,16 @@ export default function TicketList() {
           <tbody className="divide-y divide-white/5">
             {tickets.map((ticket: Ticket) => {
               const isBreached = ticket.sla.firstResponseState === 'BREACHED' || ticket.sla.resolutionState === 'BREACHED';
+              const isClosed = ticket.status === 'RESOLVED' || ticket.status === 'CLOSED';
+              
+              const renderSLA = () => {
+                if (isBreached) return { text: 'BREACHED', style: 'bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20' };
+                if (isClosed) return { text: 'MET', style: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10' };
+                if (ticket.sla.firstResponseState === 'AT_RISK') return { text: `${ticket.sla.firstResponseRemainingMinutes}m left`, style: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10' };
+                return { text: `${ticket.sla.firstResponseRemainingMinutes}m left`, style: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' };
+              };
+              
+              const slaBadge = renderSLA();
               
               return (
                 <motion.tr 
@@ -145,7 +155,7 @@ export default function TicketList() {
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
                   className="group cursor-pointer bg-transparent"
                   whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.04)" }}
-                  animate={isBreached ? { backgroundColor: ['rgba(24,24,27,0)', 'rgba(239,68,68,0.08)', 'rgba(24,24,27,0)'] } : {}}
+                  animate={isBreached && !isClosed ? { backgroundColor: ['rgba(24,24,27,0)', 'rgba(239,68,68,0.08)', 'rgba(24,24,27,0)'] } : {}}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
                   <td className="py-4 px-6 text-sm font-mono text-zinc-500 group-hover:text-zinc-400 transition-colors">
@@ -173,12 +183,8 @@ export default function TicketList() {
                     </span>
                   </td>
                   <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider border shadow-sm ${
-                      isBreached ? 'bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20' : 
-                      ticket.sla.firstResponseState === 'AT_RISK' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10' : 
-                      'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-                    }`}>
-                      {ticket.sla.firstResponseRemainingMinutes}m left
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider border shadow-sm ${slaBadge.style}`}>
+                      {slaBadge.text}
                     </span>
                   </td>
                 </motion.tr>

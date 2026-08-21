@@ -184,14 +184,14 @@ export default function TicketDetails() {
           </div>
           <div>
             <span className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">First Response SLA</span>
-            <span className={`text-sm font-medium ${ticket.sla.firstResponseState === 'BREACHED' ? 'text-red-400' : 'text-white'}`}>
-              {ticket.sla.firstResponseRemainingMinutes}m left
+            <span className={`text-sm font-medium ${ticket.sla.firstResponseState === 'BREACHED' ? 'text-red-400' : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'text-emerald-400' : 'text-white')}`}>
+              {ticket.sla.firstResponseState === 'BREACHED' ? 'BREACHED' : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'MET' : `${ticket.sla.firstResponseRemainingMinutes}m left`)}
             </span>
           </div>
           <div>
             <span className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Resolution SLA</span>
-            <span className={`text-sm font-medium ${ticket.sla.resolutionState === 'BREACHED' ? 'text-red-400' : 'text-white'}`}>
-              {ticket.sla.resolutionRemainingMinutes}m left
+            <span className={`text-sm font-medium ${ticket.sla.resolutionState === 'BREACHED' ? 'text-red-400' : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'text-emerald-400' : 'text-white')}`}>
+              {ticket.sla.resolutionState === 'BREACHED' ? 'BREACHED' : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'MET' : `${ticket.sla.resolutionRemainingMinutes}m left`)}
             </span>
           </div>
         </div>
