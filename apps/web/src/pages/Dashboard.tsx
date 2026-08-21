@@ -13,7 +13,10 @@ const DASHBOARD_QUERY = `
 `;
 
 export default function Dashboard() {
-  const [{ data: queryData, fetching }] = useQuery({ query: DASHBOARD_QUERY });
+  const [{ data: queryData, fetching }] = useQuery({ 
+    query: DASHBOARD_QUERY,
+    requestPolicy: 'cache-and-network' 
+  });
   const stats = queryData?.dashboard || { openTickets: 0, inProgressTickets: 0, atRiskTickets: 0, breachedTickets: 0 };
 
   return (

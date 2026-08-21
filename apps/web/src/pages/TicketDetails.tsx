@@ -75,7 +75,7 @@ export default function TicketDetails() {
   const user = userStr ? JSON.parse(userStr) : null;
   const isAgent = user?.role === 'AGENT';
   
-  const [{ data, fetching, error }] = useQuery({ 
+  const [{ data, fetching, error }, executeQuery] = useQuery({ 
     query: TICKET_QUERY, 
     variables: { id } 
   });
@@ -97,6 +97,7 @@ export default function TicketDetails() {
       toast.error(result.error.message, { id: toastId });
     } else {
       toast.success(`Ticket marked as ${newStatus}`, { id: toastId });
+      executeQuery({ requestPolicy: 'network-only' });
     }
   };
 
@@ -108,6 +109,7 @@ export default function TicketDetails() {
       toast.error(result.error.message, { id: toastId });
     } else {
       toast.success('Ticket assigned to you', { id: toastId });
+      executeQuery({ requestPolicy: 'network-only' });
     }
   };
 
@@ -121,6 +123,7 @@ export default function TicketDetails() {
     } else {
       toast.success('Comment posted', { id: toastId });
       setCommentText('');
+      executeQuery({ requestPolicy: 'network-only' });
     }
   };
 
@@ -213,7 +216,7 @@ export default function TicketDetails() {
                   {comment.author.name[0]}
                 </div>
                 <span className="text-sm font-medium text-white">{comment.author.name}</span>
-                <span className="text-xs text-zinc-500">{new Date(Number(comment.createdAt)).toLocaleString()}</span>
+                <span className="text-xs text-zinc-500">{new Date(comment.createdAt).toLocaleString()}</span>
               </div>
               <p className="text-sm text-zinc-300 pl-8 whitespace-pre-wrap">{comment.content}</p>
             </div>

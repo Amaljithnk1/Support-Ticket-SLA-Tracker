@@ -46,6 +46,7 @@ export default function TicketList() {
   
   const [{ data, fetching, error }] = useQuery({ 
     query: TICKETS_QUERY,
+    requestPolicy: 'cache-and-network',
     variables: { 
       take: 20,
       status: statusFilter === '' ? undefined : statusFilter,
