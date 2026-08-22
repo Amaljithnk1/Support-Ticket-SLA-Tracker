@@ -129,3 +129,7 @@ This repository includes both pure unit tests (for the math) and end-to-end inte
    bun test
    ```
    *Tests strict RBAC rules, invalid status transitions, and complex SLA-stamping lifecycles against the database.*
+## SLA State Tradeoffs
+- **List Filter vs Detail Page**: The ticket list filtering utilizes persisted boolean DB flags (`firstResponseBreached`, `resolutionBreached`) and strictly compares `NOW()` against persisted `AtRiskAt` timestamps. The detail page computes SLA state dynamically in real-time. If the business hours or holiday calendar are updated *after* a ticket is created, the list filter and the detail page may drift for historical tickets.
+- **Multi-Membership vs Aggregate Dashboard**: The Dashboard aggregates ticket states hierarchically (if a ticket is breached in resolution but at-risk in first-response, it counts as 1 `BREACHED` ticket). The Ticket List filter evaluates each axis independently, meaning that same ticket will appear in both the `BREACHED` and `AT_RISK` filter views.
+

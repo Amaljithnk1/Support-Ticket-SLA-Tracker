@@ -45,73 +45,79 @@ export const resolvers = {
 
       return Array.from(trends.values());
     },
-    tickets: async (_: unknown, args: { status?: string, priority?: string, assigneeId?: string, slaState?: string, take?: number, cursor?: string }, context: GraphQLContext) => {
-      const { status, priority, assigneeId, slaState, cursor } = args;
+    tickets: async (_: unknown, args: { status?: string, priority?: string, assigneeId?: string, slaState?: string, take?: number, cursor?: string, orderBy?: string }, context: GraphQLContext) => {
+      requireAuth(context.currentUser);
+      const { status, priority, assigneeId, slaState, cursor, orderBy } = args;
       const take = args.take || 10;
       const prisma = context.prisma;
 
-      const where: Record<string, unknown> = {};
+      const where: import("@prisma/client").Prisma.TicketWhereInput = {};
       if (status) where.status = status;
       if (priority) where.priority = priority;
       if (assigneeId) where.assigneeId = assigneeId;
 
-      const dbOrderBy: Record<string, unknown> = { createdAt: 'desc' };
-
-      if (!slaState) {
-        const queryArgs: Record<string, unknown> = { where, take: take + 1, orderBy: dbOrderBy };
-        if (cursor) {
-          queryArgs.cursor = { id: cursor };
-          queryArgs.skip = 1;
+      if (slaState) {
+        const now = new Date();
+        if (slaState === 'BREACHED') {
+          where.OR = [
+            { firstResponseBreached: true },
+            { resolutionBreached: true },
+            { firstResponseAt: null, firstResponseDueAt: { lt: now } },
+            { resolvedAt: null, resolutionDueAt: { lt: now } }
+          ];
+        } else if (slaState === 'AT_RISK') {
+          where.OR = [
+            { firstResponseAt: null, firstResponseAtRiskAt: { lt: now }, firstResponseDueAt: { gte: now } },
+            { resolvedAt: null, resolutionAtRiskAt: { lt: now }, resolutionDueAt: { gte: now } }
+          ];
+        } else if (slaState === 'ON_TRACK') {
+          where.OR = [
+            { firstResponseBreached: false },
+            { resolutionBreached: false },
+            { firstResponseAt: null, firstResponseAtRiskAt: { gte: now } },
+            { resolvedAt: null, resolutionAtRiskAt: { gte: now } }
+          ];
         }
-        
-        const results = await prisma.ticket.findMany(queryArgs as Parameters<typeof prisma.ticket.findMany>[0]);
-        const hasNextPage = results.length > take;
-        const nodes = hasNextPage ? results.slice(0, -1) : results;
-        return {
-          nodes,
-          pageInfo: {
-            hasNextPage,
-            endCursor: nodes.length > 0 ? nodes[nodes.length - 1].id : null,
-          }
-        };
       }
 
-      const MAX_OVERFETCH = take * 5;
-      const queryArgs: Record<string, unknown> = { where, take: MAX_OVERFETCH, orderBy: dbOrderBy };
+      let dbOrderBy: import("@prisma/client").Prisma.TicketOrderByWithRelationInput | import("@prisma/client").Prisma.TicketOrderByWithRelationInput[] = { createdAt: "desc" };
+      if (orderBy === 'CREATED_AT_ASC') {
+        dbOrderBy = { createdAt: 'asc' };
+      } else if (orderBy === 'PRIORITY_DESC') {
+        dbOrderBy = [{ priority: 'desc' }, { createdAt: 'desc' }];
+      }
+
+      const queryArgs: import("@prisma/client").Prisma.TicketFindManyArgs = { where, take: take + 1, orderBy: dbOrderBy };
       if (cursor) {
         queryArgs.cursor = { id: cursor };
         queryArgs.skip = 1;
       }
-
-      const results = await prisma.ticket.findMany(queryArgs as Parameters<typeof prisma.ticket.findMany>[0]);
-      const timeZone = process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
-      const holidays = await prisma.holiday.findMany();
-      const holidayDates = holidays.map(h => h.date);
-      const now = new Date();
       
-      const filtered = results.filter(ticket => {
-        const policy = SLA_POLICIES[ticket.priority as keyof typeof SLA_POLICIES];
-        const frState = calculateSlaState(ticket.firstResponseDueAt, ticket.firstResponseAt, now, policy.firstResponseHours * 60, ticket.createdAt, timeZone, holidayDates);
-        const resState = calculateSlaState(ticket.resolutionDueAt, ticket.resolvedAt, now, policy.resolutionHours * 60, ticket.createdAt, timeZone, holidayDates);
-        
-        return frState === slaState || resState === slaState;
-      });
-
-      const nodes = filtered.slice(0, take);
-      const hasNextPage = filtered.length > take;
-
+      const results = await prisma.ticket.findMany(queryArgs);
+      const hasNextPage = results.length > take;
+      const nodes = hasNextPage ? results.slice(0, -1) : results;
       return {
         nodes,
         pageInfo: {
           hasNextPage,
           endCursor: nodes.length > 0 ? nodes[nodes.length - 1].id : null,
         }
-      }
+      };
     },
-    ticket: (_: unknown, args: { id: string }, context: GraphQLContext) => context.prisma.ticket.findUnique({ where: { id: args.id } }),
-    users: (_: unknown, args: { role: UserRole }, context: GraphQLContext) => context.prisma.user.findMany({ where: { role: args.role } }),
-    holidays: (_: unknown, args: Record<string, unknown>, context: GraphQLContext) => context.prisma.holiday.findMany(),
+    ticket: (_: unknown, args: { id: string }, context: GraphQLContext) => {
+      requireAuth(context.currentUser);
+      return context.prisma.ticket.findUnique({ where: { id: args.id } });
+    },
+    users: (_: unknown, args: { role: UserRole }, context: GraphQLContext) => {
+      requireAuth(context.currentUser);
+      return context.prisma.user.findMany({ where: { role: args.role } });
+    },
+    holidays: (_: unknown, args: Record<string, unknown>, context: GraphQLContext) => {
+      requireAuth(context.currentUser);
+      return context.prisma.holiday.findMany();
+    },
     dashboard: async (_: unknown, args: Record<string, unknown>, context: GraphQLContext) => {
+      requireAuth(context.currentUser);
       const tickets = await context.prisma.ticket.findMany();
       const timeZone = process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
       const holidays = await context.prisma.holiday.findMany();
@@ -124,8 +130,9 @@ export const resolvers = {
         if (t.status === 'OPEN') open++;
         if (t.status === 'IN_PROGRESS') inProgress++;
         
-        const firstResponseState = calculateSlaState(t.firstResponseDueAt, t.firstResponseAt, now, t.priority === 'URGENT' ? 60 : t.priority === 'HIGH' ? 240 : t.priority === 'MEDIUM' ? 480 : 1440, t.createdAt, timeZone, holidayDates);
-        const resolutionState = calculateSlaState(t.resolutionDueAt, t.resolvedAt, now, t.priority === 'URGENT' ? 240 : t.priority === 'HIGH' ? 1440 : t.priority === 'MEDIUM' ? 2880 : 7200, t.createdAt, timeZone, holidayDates);
+        const policy = SLA_POLICIES[t.priority as keyof typeof SLA_POLICIES];
+        const firstResponseState = calculateSlaState(t.firstResponseDueAt, t.firstResponseAt, now, policy.firstResponseHours * 60, t.createdAt, timeZone, holidayDates);
+        const resolutionState = calculateSlaState(t.resolutionDueAt, t.resolvedAt, now, policy.resolutionHours * 60, t.createdAt, timeZone, holidayDates);
         
         if (firstResponseState === 'BREACHED' || resolutionState === 'BREACHED') {
           breached++;

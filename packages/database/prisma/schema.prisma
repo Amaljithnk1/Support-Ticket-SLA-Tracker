@@ -60,6 +60,11 @@ model Ticket {
   firstResponseDueAt DateTime
   resolutionDueAt    DateTime
 
+
+  firstResponseAtRiskAt DateTime?
+  resolutionAtRiskAt    DateTime?
+  firstResponseBreached Boolean?
+  resolutionBreached    Boolean?
   // SLA Actual Timestamps (Set when event occurs)
   firstResponseAt    DateTime?
   resolvedAt         DateTime?

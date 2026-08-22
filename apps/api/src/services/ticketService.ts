@@ -29,6 +29,8 @@ export async function createTicket(prisma: PrismaClient, args: { title: string, 
       reporterId,
       firstResponseDueAt: targets.firstResponseDueAt,
       resolutionDueAt: targets.resolutionDueAt,
+      firstResponseAtRiskAt: targets.firstResponseAtRiskAt,
+      resolutionAtRiskAt: targets.resolutionAtRiskAt,
       createdAt,
     },
   });
@@ -51,15 +53,19 @@ export async function changeTicketStatus(prisma: PrismaClient, ticketId: string,
   }
   
   let resolvedAt = ticket.resolvedAt;
+  let resolutionBreached = ticket.resolutionBreached;
+  
   if ((status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED) && !resolvedAt) {
     resolvedAt = new Date(); // Stamp resolution time!
+    resolutionBreached = resolvedAt > ticket.resolutionDueAt;
   } else if (status === TicketStatus.OPEN || status === TicketStatus.IN_PROGRESS) {
     resolvedAt = null; // Un-resolve!
+    resolutionBreached = null;
   }
 
   return prisma.ticket.update({
     where: { id: ticketId },
-    data: { status, resolvedAt },
+    data: { status, resolvedAt, resolutionBreached },
   });
 }
 
