@@ -1,4 +1,4 @@
-﻿import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { calculateSlaState, isBusinessMinute, addBusinessMinutes } from '../src/calculator';
 import { SLAState } from '../src/config';
 
@@ -97,7 +97,7 @@ describe('SLA Engine', () => {
       expect(state).toBe(SLAState.AT_RISK);
     });
 
-    test('Freeze: SLA completed on time, now moves far past dueAt later â€” state must remain frozen ON_TRACK', () => {
+    test('Freeze: SLA completed on time, now moves far past dueAt later — state must remain frozen ON_TRACK', () => {
       const createdAt = new Date('2026-08-17T03:30:00Z'); // Mon 09:00
       const dueAt = new Date('2026-08-17T04:30:00Z'); // Mon 10:00
       const actualEventAt = new Date('2026-08-17T04:00:00Z'); // Mon 09:30 (On Time)
