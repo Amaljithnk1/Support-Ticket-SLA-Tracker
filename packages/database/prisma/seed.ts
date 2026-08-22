@@ -1,4 +1,5 @@
 import { PrismaClient, UserRole, Priority, TicketStatus } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -16,8 +17,7 @@ async function main() {
   });
 
   // 2. Create Users
-  // Password hash for 'password123' (Dummy hash, in real app it would be generated via Argon2)
-  const dummyHash = '$argon2id$v=19$m=65536,t=3,p=4$dummyhash$dummyhash'; 
+  const dummyHash = await bcrypt.hash('password123', 10);
   
   const reporter = await prisma.user.upsert({
     where: { email: 'reporter@example.com' },

@@ -6,13 +6,16 @@ import { join } from 'path';
 import { resolvers } from './resolvers';
 import { createDataLoaders } from './dataloaders';
 import { verifyToken } from './services/authService';
-import { buildSchema } from 'graphql';
+import { makeExecutableSchema } from '@graphql-tools/schema';
 
 const prisma = new PrismaClient();
 const typeDefs = readFileSync(join(__dirname, 'schema.graphql'), 'utf-8');
-const schema = buildSchema(typeDefs); // Note: For Yoga with just resolvers obj we can use makeExecutableSchema or simple object
 
-import { makeExecutableSchema } from '@graphql-tools/schema';
+export interface GraphQLContext {
+  prisma: PrismaClient;
+  currentUser: { userId: string; role: string } | null; 
+  dataloaders: ReturnType<typeof createDataLoaders>;
+}
 
 const executableSchema = makeExecutableSchema({
   typeDefs,

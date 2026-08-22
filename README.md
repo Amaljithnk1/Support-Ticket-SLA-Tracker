@@ -73,11 +73,36 @@ The GraphQL resolvers do not eagerly fetch relations or rely on native Prisma ne
 To ensure strict ticket lifecycles, the backend enforces the following transition rules:
 - `CLOSED` tickets cannot transition directly back to `IN_PROGRESS` (they must be reopened to `OPEN` first).
 - Tickets marked as `RESOLVED` freeze the SLA Resolution timer. Reopening a resolved ticket does not un-freeze the original deadline clock.
+- `OPEN` -> `IN_PROGRESS`
+- `IN_PROGRESS` -> `RESOLVED`
+- `RESOLVED` -> `CLOSED` or `IN_PROGRESS`
+- `CLOSED` -> `OPEN` (Explicit reopen)
+
+## Seed Credentials
+After running `bun run db:seed`, you can log in with:
+- **Reporter**: `reporter@example.com` / `password123`
+- **Agent**: `agent@example.com` / `password123`
 
 ## Environment Variables
 - `DATABASE_URL`: Connection string for PostgreSQL
-- `JWT_SECRET`: Secret key for Argon2/Bcrypt auth tokens
+- `JWT_SECRET`: Secret key for Bcrypt auth tokens
 - `BUSINESS_TIMEZONE`: Timezone for the SLA calculator (e.g. `Asia/Kolkata`)
+
+## Example GraphQL Query
+```graphql
+query GetTickets {
+  tickets(take: 10) {
+    nodes {
+      title
+      status
+      sla {
+        firstResponseState
+        resolutionState
+      }
+    }
+  }
+}
+```
 
 ## How I'd Extend This
 If given more time, I would expand the architecture with:
