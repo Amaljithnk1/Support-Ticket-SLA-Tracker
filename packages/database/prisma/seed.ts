@@ -50,10 +50,12 @@ async function main() {
       status: TicketStatus.IN_PROGRESS,
       reporterId: reporter.id,
       assigneeId: agent.id,
-      // For seeding, mock the due times (e.g. 1 business hour and 4 business hours from now)
       firstResponseDueAt: new Date(Date.now() + 60 * 60 * 1000), 
       resolutionDueAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
-      firstResponseAt: new Date(), // Mock that it was already responded to
+      firstResponseAtRiskAt: new Date(Date.now() + 45 * 60 * 1000),
+      resolutionAtRiskAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
+      firstResponseAt: new Date(),
+      firstResponseBreached: false, // Met SLA
     },
   });
 
@@ -66,6 +68,8 @@ async function main() {
       reporterId: reporter.id,
       firstResponseDueAt: new Date(Date.now() + 4 * 60 * 60 * 1000), 
       resolutionDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      firstResponseAtRiskAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
+      resolutionAtRiskAt: new Date(Date.now() + 18 * 60 * 60 * 1000),
     },
   });
 
@@ -82,9 +86,12 @@ async function main() {
       reporterId: reporter.id,
       assigneeId: agent.id,
       createdAt: friday,
-      firstResponseDueAt: new Date(friday.getTime() + 4 * 60 * 60 * 1000),
-      resolutionDueAt: new Date(friday.getTime() + 24 * 60 * 60 * 1000),
+      firstResponseDueAt: new Date(friday.getTime() + 8 * 60 * 60 * 1000),
+      resolutionDueAt: new Date(friday.getTime() + 48 * 60 * 60 * 1000),
+      firstResponseAtRiskAt: new Date(friday.getTime() + 6 * 60 * 60 * 1000),
+      resolutionAtRiskAt: new Date(friday.getTime() + 36 * 60 * 60 * 1000),
       firstResponseAt: new Date(friday.getTime() + 60 * 60 * 1000), // MET (Responded in 1 hr)
+      firstResponseBreached: false,
     },
   });
 
@@ -98,8 +105,24 @@ async function main() {
       createdAt: friday,
       firstResponseDueAt: new Date(friday.getTime() + 1 * 60 * 60 * 1000), // Due in 1 hr
       resolutionDueAt: new Date(friday.getTime() + 4 * 60 * 60 * 1000),
+      firstResponseAtRiskAt: new Date(friday.getTime() + 45 * 60 * 1000),
+      resolutionAtRiskAt: new Date(friday.getTime() + 3 * 60 * 60 * 1000),
       // No firstResponseAt, and since Friday is in the past, this will naturally be BREACHED!
     },
+  });
+
+  await prisma.ticket.create({
+    data: {
+      title: 'Update documentation typos',
+      description: 'Found some minor typos in the README.',
+      priority: Priority.LOW,
+      status: TicketStatus.OPEN,
+      reporterId: reporter.id,
+      firstResponseDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000), 
+      resolutionDueAt: new Date(Date.now() + 120 * 60 * 60 * 1000),
+      firstResponseAtRiskAt: new Date(Date.now() + 18 * 60 * 60 * 1000),
+      resolutionAtRiskAt: new Date(Date.now() + 90 * 60 * 60 * 1000),
+    }
   });
 
   // 4. Create Comments

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { calculateSlaState, isBusinessMinute, addBusinessMinutes } from '../src/calculator';
-import { SLAState } from '../src/config';
+import { calculateSlaState, isBusinessMinute, addBusinessMinutes, calculateSlaTargets } from '../src/calculator';
+import { SLAState, Priority } from '../src/config';
 
 describe('SLA Engine', () => {
   const tz = 'Asia/Kolkata';
@@ -120,4 +120,15 @@ describe('SLA Engine', () => {
     });
   });
 
+
+
+
+  describe('At-Risk Boundary Calculations', () => {
+    test('computes 75% at-risk thresholds correctly considering business hours', () => {
+      const monday9AM = new Date('2026-06-01T13:00:00Z');
+      const targets = calculateSlaTargets(monday9AM, Priority.URGENT, 'America/New_York', []);
+      expect(targets.firstResponseAtRiskAt).toEqual(new Date('2026-06-01T13:45:00Z'));
+      expect(targets.resolutionAtRiskAt).toEqual(new Date('2026-06-01T16:00:00Z'));
+    });
+  });
 });

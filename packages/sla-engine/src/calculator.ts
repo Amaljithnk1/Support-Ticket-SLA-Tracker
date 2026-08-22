@@ -57,13 +57,16 @@ export function getElapsedBusinessMinutes(start: Date, end: Date, timeZone: stri
   return elapsed;
 }
 
-export function calculateSlaTargets(createdAt: Date, priority: Priority, timeZone: string, holidays: Date[]): { firstResponseDueAt: Date, resolutionDueAt: Date } {
+export function calculateSlaTargets(createdAt: Date, priority: Priority, timeZone: string, holidays: Date[]): { firstResponseDueAt: Date, resolutionDueAt: Date, firstResponseAtRiskAt: Date, resolutionAtRiskAt: Date } {
   const policy = SLA_POLICIES[priority];
   
   const firstResponseDueAt = addBusinessMinutes(createdAt, policy.firstResponseHours * 60, timeZone, holidays);
   const resolutionDueAt = addBusinessMinutes(createdAt, policy.resolutionHours * 60, timeZone, holidays);
   
-  return { firstResponseDueAt, resolutionDueAt };
+  const firstResponseAtRiskAt = addBusinessMinutes(createdAt, Math.floor(policy.firstResponseHours * 60 * 0.75), timeZone, holidays);
+  const resolutionAtRiskAt = addBusinessMinutes(createdAt, Math.floor(policy.resolutionHours * 60 * 0.75), timeZone, holidays);
+  
+  return { firstResponseDueAt, resolutionDueAt, firstResponseAtRiskAt, resolutionAtRiskAt };
 }
 
 export function calculateSlaState(dueAt: Date, actualEventAt: Date | null, now: Date, totalBudgetMinutes: number, createdAt: Date, timeZone: string, holidays: Date[]): SLAState {
