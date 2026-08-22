@@ -69,6 +69,39 @@ async function main() {
     },
   });
 
+  // Mock Friday Data for the Chart
+  const friday = new Date();
+  friday.setDate(friday.getDate() - 1); // Yesterday (Friday)
+
+  await prisma.ticket.create({
+    data: {
+      title: 'Missing attachment on invoice',
+      description: 'The invoice I downloaded has no PDF attached.',
+      priority: Priority.MEDIUM,
+      status: TicketStatus.IN_PROGRESS,
+      reporterId: reporter.id,
+      assigneeId: agent.id,
+      createdAt: friday,
+      firstResponseDueAt: new Date(friday.getTime() + 4 * 60 * 60 * 1000),
+      resolutionDueAt: new Date(friday.getTime() + 24 * 60 * 60 * 1000),
+      firstResponseAt: new Date(friday.getTime() + 60 * 60 * 1000), // MET (Responded in 1 hr)
+    },
+  });
+
+  await prisma.ticket.create({
+    data: {
+      title: 'API endpoint returning 500',
+      description: 'The /users endpoint is completely down.',
+      priority: Priority.URGENT,
+      status: TicketStatus.OPEN,
+      reporterId: reporter.id,
+      createdAt: friday,
+      firstResponseDueAt: new Date(friday.getTime() + 1 * 60 * 60 * 1000), // Due in 1 hr
+      resolutionDueAt: new Date(friday.getTime() + 4 * 60 * 60 * 1000),
+      // No firstResponseAt, and since Friday is in the past, this will naturally be BREACHED!
+    },
+  });
+
   // 4. Create Comments
   await prisma.comment.create({
     data: {

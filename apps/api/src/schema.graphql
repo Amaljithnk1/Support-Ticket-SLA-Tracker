@@ -95,7 +95,14 @@ enum SortOrder {
   PRIORITY_DESC
 }
 
+type TrendData {
+  date: String!
+  met: Int!
+  breached: Int!
+}
+
 type Query {
+  slaTrend(days: Int!): [TrendData!]!
   tickets(
     status: TicketStatus
     priority: Priority
