@@ -1,6 +1,6 @@
 ﻿import { PrismaClient, TicketStatus, Priority, UserRole, Ticket } from '@prisma/client';
 import { AppError, ErrorCode } from '../errors';
-import { calculateSlaTargets, calculateSlaTargets } from '@sla-tracker/sla-engine';
+import { calculateSlaTargets } from '@sla-tracker/sla-engine';
 
 
 export async function createTicket(prisma: PrismaClient, args: { title: string, description: string, priority: Priority }, reporterId: string): Promise<Ticket> {
@@ -18,8 +18,7 @@ export async function createTicket(prisma: PrismaClient, args: { title: string, 
   const createdAt = new Date();
   
   // Calculate Target SLAs mathematically at creation!
-  // @ts-expect-error Prisma and the isolated SLA engine use structurally identical but distinct Enums
-  const targets = calculateSlaTargets(createdAt, args.priority, timeZone, holidayDates);
+  const targets = calculateSlaTargets(createdAt, args.priority as unknown as import('@sla-tracker/sla-engine').Priority, timeZone, holidayDates);
 
   return prisma.ticket.create({
     data: {
@@ -124,6 +123,9 @@ export async function addComment(prisma: PrismaClient, ticketId: string, content
 
   return comment;
 }
+
+
+
 
 
 
