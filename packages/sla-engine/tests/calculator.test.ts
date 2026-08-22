@@ -108,7 +108,7 @@ describe('SLA Engine', () => {
       expect(state).toBe(SLAState.ON_TRACK); // Not breached!
     });
 
-    test('Freeze: SLA completed late â€” state is frozen BREACHED, not AT_RISK', () => {
+    test('Freeze: SLA completed late — state is frozen BREACHED, not AT_RISK', () => {
       const createdAt = new Date('2026-08-17T03:30:00Z'); // Mon 09:00
       const dueAt = new Date('2026-08-17T04:30:00Z'); // Mon 10:00
       const actualEventAt = new Date('2026-08-17T05:00:00Z'); // Mon 10:30 (Late)

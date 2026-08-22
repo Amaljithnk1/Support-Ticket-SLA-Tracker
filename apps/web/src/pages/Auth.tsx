@@ -1,7 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useMutation } from 'urql';
 import { toast } from 'sonner';
-import { CustomSelect } from '../components/ui/CustomSelect';
 
 const LOGIN_MUTATION = `
   mutation Login($email: String!, $password: String!) {
@@ -34,7 +33,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState('REPORTER');
+  const role = 'REPORTER';
 
   const [, login] = useMutation(LOGIN_MUTATION);
   const [, register] = useMutation(REGISTER_MUTATION);
@@ -108,19 +107,7 @@ export default function Auth() {
             />
           </div>
 
-          {!isLogin && (
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1">Role</label>
-              <CustomSelect 
-                value={role}
-                onChange={setRole}
-                options={[
-                  { value: 'REPORTER', label: 'Reporter (Can create tickets)' },
-                  { value: 'AGENT', label: 'Agent (Can resolve & assign tickets)' }
-                ]}
-              />
-            </div>
-          )}
+          
 
           <button 
             type="submit" 
@@ -143,4 +130,5 @@ export default function Auth() {
     </div>
   );
 }
+
 
