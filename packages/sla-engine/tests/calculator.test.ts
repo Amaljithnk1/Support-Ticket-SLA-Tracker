@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { calculateSlaState, isBusinessMinute, addBusinessMinutes } from '../src/calculator';
+import { calculateSlaState, isBusinessMinute, addBusinessMinutes, calculateSlaTargets } from '../src/calculator';
 import { SLAState } from '../src/config';
 
 describe('SLA Engine', () => {
