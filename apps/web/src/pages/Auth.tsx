@@ -1,7 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useMutation } from 'urql';
 import { toast } from 'sonner';
-import { CustomSelect } from '../components/ui/CustomSelect';
 
 const LOGIN_MUTATION = `
   mutation Login($email: String!, $password: String!) {
@@ -34,7 +33,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState('REPORTER');
+  const role = 'REPORTER';
 
   const [, login] = useMutation(LOGIN_MUTATION);
   const [, register] = useMutation(REGISTER_MUTATION);
