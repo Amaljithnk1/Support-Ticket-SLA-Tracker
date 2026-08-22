@@ -1,22 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'urql';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { CustomSelect } from '../components/ui/CustomSelect';
 
 const TICKETS_QUERY = `
-  query GetTickets {
-    tickets(take: 20) {
+  query GetTickets($status: TicketStatus, $priority: Priority, $take: Int, $cursor: String) {
+    tickets(status: $status, priority: $priority, take: $take, cursor: $cursor) {
       nodes {
         id
         title
         status
         priority
+        firstResponseAt
         sla {
           firstResponseState
           resolutionState
           firstResponseRemainingMinutes
           resolutionRemainingMinutes
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
@@ -36,31 +42,84 @@ interface Ticket {
 }
 
 export default function TicketList() {
-  const [{ data, fetching, error }] = useQuery({ query: TICKETS_QUERY });
+  const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  
+  const [{ data, fetching, error }] = useQuery({ 
+    query: TICKETS_QUERY,
+    requestPolicy: 'cache-and-network',
+    variables: { 
+      take: 20,
+      status: statusFilter === '' ? undefined : statusFilter,
+      priority: priorityFilter === '' ? undefined : priorityFilter
+    }
+  });
+  
   const navigate = useNavigate();
 
-  if (fetching) return <div className="p-8 text-zinc-500">Loading tickets...</div>;
-  if (error) return <div className="p-8 text-red-400">Error loading tickets</div>;
-
-  const tickets = data?.tickets?.nodes || [];
-
   const handleNewTicket = () => {
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+    document.dispatchEvent(new CustomEvent('open-create-ticket'));
   };
 
+  const tickets = data?.tickets?.nodes || [];
+  const pageInfo = data?.tickets?.pageInfo;
+
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-8 max-w-6xl mx-auto space-y-6">
+      <div className="flex justify-between items-center mb-2">
         <h1 className="text-2xl font-semibold text-white tracking-tight">Tickets</h1>
         <button 
           onClick={handleNewTicket}
-          className="px-4 py-2 bg-white text-black text-sm font-medium rounded-md shadow-lg shadow-white/10 hover:bg-zinc-200 hover:shadow-white/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
+          className="px-4 py-2 bg-white text-black text-sm font-medium rounded-md shadow-lg shadow-white/10 hover:bg-zinc-200 transition-all hover:-translate-y-0.5"
         >
           New Ticket
         </button>
       </div>
 
-      <div className="bg-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+      <div className="flex gap-4">
+        <div className="w-48">
+          <CustomSelect 
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder="All Statuses"
+            options={[
+              { value: '', label: 'All Statuses' },
+              { value: 'OPEN', label: 'Open' },
+              { value: 'IN_PROGRESS', label: 'In Progress' },
+              { value: 'RESOLVED', label: 'Resolved' },
+              { value: 'CLOSED', label: 'Closed' }
+            ]}
+          />
+        </div>
+        <div className="w-48">
+          <CustomSelect 
+            value={priorityFilter}
+            onChange={setPriorityFilter}
+            placeholder="All Priorities"
+            options={[
+              { value: '', label: 'All Priorities' },
+              { value: 'LOW', label: 'Low' },
+              { value: 'MEDIUM', label: 'Medium' },
+              { value: 'HIGH', label: 'High' },
+              { value: 'URGENT', label: 'Urgent' }
+            ]}
+          />
+        </div>
+      </div>
+
+      <div className="bg-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl relative min-h-[400px]">
+        {fetching && tickets.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
+            <span className="text-sm text-zinc-400">Loading...</span>
+          </div>
+        )}
+        
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
+            <span className="text-sm text-red-400">Error loading tickets</span>
+          </div>
+        )}
+
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.03]">
@@ -74,6 +133,15 @@ export default function TicketList() {
           <tbody className="divide-y divide-white/5">
             {tickets.map((ticket: Ticket) => {
               const isBreached = ticket.sla.firstResponseState === 'BREACHED' || ticket.sla.resolutionState === 'BREACHED';
+              const isClosed = ticket.status === 'RESOLVED' || ticket.status === 'CLOSED';
+              const renderSLA = () => {
+                if (isBreached) return { text: 'BREACHED', style: 'bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20' };
+                if (isClosed || ticket.firstResponseAt) return { text: 'MET', style: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10' };
+                if (ticket.sla.firstResponseState === 'AT_RISK') return { text: `${ticket.sla.firstResponseRemainingMinutes}m left`, style: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10' };
+                return { text: `${ticket.sla.firstResponseRemainingMinutes}m left`, style: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' };
+              };
+              
+              const slaBadge = renderSLA();
               
               return (
                 <motion.tr 
@@ -81,7 +149,7 @@ export default function TicketList() {
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
                   className="group cursor-pointer bg-transparent"
                   whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.04)" }}
-                  animate={isBreached ? { backgroundColor: ['rgba(24,24,27,0)', 'rgba(239,68,68,0.08)', 'rgba(24,24,27,0)'] } : {}}
+                  animate={isBreached && !isClosed ? { backgroundColor: ['rgba(24,24,27,0)', 'rgba(239,68,68,0.08)', 'rgba(24,24,27,0)'] } : {}}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
                   <td className="py-4 px-6 text-sm font-mono text-zinc-500 group-hover:text-zinc-400 transition-colors">
@@ -109,12 +177,8 @@ export default function TicketList() {
                     </span>
                   </td>
                   <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider border shadow-sm ${
-                      isBreached ? 'bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20' : 
-                      ticket.sla.firstResponseState === 'AT_RISK' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10' : 
-                      'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-                    }`}>
-                      {ticket.sla.firstResponseRemainingMinutes}m left
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider border shadow-sm ${slaBadge.style}`}>
+                      {slaBadge.text}
                     </span>
                   </td>
                 </motion.tr>
@@ -122,6 +186,14 @@ export default function TicketList() {
             })}
           </tbody>
         </table>
+        
+        {pageInfo?.hasNextPage && (
+          <div className="p-4 border-t border-white/5 flex justify-center">
+            <button className="text-xs font-medium text-zinc-400 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-md border border-white/10 hover:bg-white/10">
+              Load More (Mocked for demo)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

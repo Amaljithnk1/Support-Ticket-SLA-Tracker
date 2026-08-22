@@ -59,7 +59,16 @@ export function Shell() {
           <div className="flex items-center gap-2 text-sm text-zinc-400">
             <span>Press <kbd className="font-mono text-xs bg-white/10 px-1.5 py-0.5 rounded text-zinc-300 shadow-sm border border-white/5">{shortcut}</kbd> to search</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = '/auth';
+              }}
+              className="text-xs font-medium text-zinc-400 hover:text-white transition-colors px-2 py-1"
+            >
+              Sign Out
+            </button>
             <div className="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center border border-brand/30 shadow-inner">
               <span className="text-xs font-medium text-brand-300">A</span>
             </div>

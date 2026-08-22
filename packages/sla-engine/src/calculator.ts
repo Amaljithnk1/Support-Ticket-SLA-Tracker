@@ -23,22 +23,21 @@ export function isBusinessMinute(date: Date, timeZone: string, holidayStrings: S
 export function addBusinessMinutes(startDate: Date, businessMinutes: number, timeZone: string, holidays: Date[]): Date {
   if (businessMinutes === 0) return startDate;
 
+  // Floor the start date to 0 seconds to prevent sub-minute drift
+  let current = new Date(startDate);
+  current.setSeconds(0, 0);
+  
   const holidayStrings = new Set(holidays.map(h => getDateStringInTimezone(h, timeZone)));
-  let current = startDate;
   let remaining = businessMinutes;
   
   while (remaining > 0) {
     if (isBusinessMinute(current, timeZone, holidayStrings)) {
       remaining -= 1;
     }
-    
-    if (remaining > 0) {
-      current = addMinutes(current, 1);
-    }
+    current = addMinutes(current, 1);
   }
   
-  // Advance one final minute so the due time hits the exact expected boundary (e.g., 10:00 instead of 09:59)
-  return addMinutes(current, 1);
+  return current;
 }
 
 export function getElapsedBusinessMinutes(start: Date, end: Date, timeZone: string, holidays: Date[]): number {
