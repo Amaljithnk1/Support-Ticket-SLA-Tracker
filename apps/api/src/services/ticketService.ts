@@ -42,10 +42,17 @@ export async function changeTicketStatus(prisma: PrismaClient, ticketId: string,
   if (ticket.status === TicketStatus.CLOSED && status === TicketStatus.IN_PROGRESS) {
     throw new AppError('Ticket cannot transition from CLOSED to IN_PROGRESS.', ErrorCode.INVALID_STATUS_TRANSITION);
   }
+  
+  let resolvedAt = ticket.resolvedAt;
+  if ((status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED) && !resolvedAt) {
+    resolvedAt = new Date(); // Stamp resolution time!
+  } else if (status === TicketStatus.OPEN || status === TicketStatus.IN_PROGRESS) {
+    resolvedAt = null; // Un-resolve!
+  }
 
   return prisma.ticket.update({
     where: { id: ticketId },
-    data: { status },
+    data: { status, resolvedAt },
   });
 }
 

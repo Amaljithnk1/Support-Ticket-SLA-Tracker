@@ -7,6 +7,51 @@ import { SLA_POLICIES } from '@sla-tracker/sla-engine';
 
 export const resolvers = {
   Query: {
+    slaTrend: async (_: any, args: any, context: any) => {
+      requireAuth(context.currentUser);
+      const { days } = args;
+      const prisma = context.prisma as PrismaClient;
+      
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      
+      const tickets = await prisma.ticket.findMany({
+        where: { createdAt: { gte: cutoff } },
+        orderBy: { createdAt: 'asc' }
+      });
+      
+      const trends = new Map<string, { met: number, breached: number }>();
+      const now = new Date();
+      now.setSeconds(0,0);
+      
+      // Pre-fill the last 7 days so the UI chart always has a timeline to draw
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dayStr = d.toLocaleDateString('en-US', { weekday: 'short' });
+        trends.set(dayStr, { met: 0, breached: 0 });
+      }
+      
+      for (const t of tickets) {
+        const day = new Date(t.createdAt).toLocaleDateString('en-US', { weekday: 'short' });
+        if (!trends.has(day)) continue; // ignore tickets outside the strict boundary
+        const stats = trends.get(day)!;
+        
+        if (t.resolvedAt) {
+          if (t.resolvedAt <= t.resolutionDueAt) stats.met++;
+          else stats.breached++;
+        } else {
+          if (now > t.resolutionDueAt) stats.breached++;
+          // If now <= dueAt, it's pending. Ignore it completely!
+        }
+      }
+      
+      return Array.from(trends.entries()).map(([date, counts]) => ({
+        date,
+        met: counts.met,
+        breached: counts.breached
+      }));
+    },
     tickets: async (_: any, args: any, context: any) => {
       const { status, priority, assigneeId, slaState, orderBy, take = 10, cursor } = args;
       const prisma = context.prisma as PrismaClient;
@@ -80,12 +125,34 @@ export const resolvers = {
     users: (_: any, args: any, context: any) => context.prisma.user.findMany({ where: { role: args.role } }),
     holidays: (_: any, args: any, context: any) => context.prisma.holiday.findMany(),
     dashboard: async (_: any, args: any, context: any) => {
-      // Extremely basic dashboard (in reality we'd iterate active tickets or use DB agg)
+      const tickets = await context.prisma.ticket.findMany();
+      const timeZone = process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
+      const holidays = await context.prisma.holiday.findMany();
+      const holidayDates = holidays.map((h: any) => h.date);
+      const now = new Date();
+      
+      let open = 0, inProgress = 0, atRisk = 0, breached = 0;
+      
+      for (const t of tickets) {
+        if (t.status === 'OPEN') open++;
+        if (t.status === 'IN_PROGRESS') inProgress++;
+        
+        // Calculate dynamic SLA state to power the dashboard metrics
+        const firstResponseState = calculateSlaState(t.firstResponseDueAt, t.firstResponseAt, now, t.priority === 'URGENT' ? 60 : t.priority === 'HIGH' ? 240 : t.priority === 'MEDIUM' ? 480 : 1440, t.createdAt, timeZone, holidayDates);
+        const resolutionState = calculateSlaState(t.resolutionDueAt, t.resolvedAt, now, t.priority === 'URGENT' ? 240 : t.priority === 'HIGH' ? 1440 : t.priority === 'MEDIUM' ? 2880 : 7200, t.createdAt, timeZone, holidayDates);
+        
+        if (firstResponseState === 'BREACHED' || resolutionState === 'BREACHED') {
+          breached++;
+        } else if (firstResponseState === 'AT_RISK' || resolutionState === 'AT_RISK') {
+          atRisk++;
+        }
+      }
+      
       return {
-        openTickets: await context.prisma.ticket.count({ where: { status: 'OPEN' } }),
-        inProgressTickets: await context.prisma.ticket.count({ where: { status: 'IN_PROGRESS' } }),
-        atRiskTickets: 0, // Mocked for now to save DB load
-        breachedTickets: 0,
+        openTickets: open,
+        inProgressTickets: inProgress,
+        atRiskTickets: atRisk,
+        breachedTickets: breached,
       }
     }
   },
