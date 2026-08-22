@@ -121,3 +121,18 @@ describe('SLA Engine', () => {
   });
 
 });
+
+  describe('At-Risk Boundary Calculations', () => {
+    it('computes 75% at-risk thresholds correctly considering business hours', () => {
+      // 9:00 AM on Monday
+      const monday9AM = new Date('2026-06-01T13:00:00Z'); // 9AM EST
+      
+      const targets = calculateSlaTargets(monday9AM, 'URGENT', 'America/New_York', []);
+      
+      // URGENT First Response: 1 hr (60m). At-risk should be 45m.
+      expect(targets.firstResponseAtRiskAt).toEqual(new Date('2026-06-01T13:45:00Z'));
+      
+      // URGENT Resolution: 4 hr (240m). At-risk should be 3 hr (180m).
+      expect(targets.resolutionAtRiskAt).toEqual(new Date('2026-06-01T16:00:00Z'));
+    });
+  });
