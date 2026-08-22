@@ -103,15 +103,16 @@ export async function addComment(prisma: PrismaClient, ticketId: string, content
     data: { content, ticketId, authorId },
   });
 
-  // Stamp first response if it's the first agent comment
-  if (!ticket.firstResponseAt) {
-    const author = await prisma.user.findUnique({ where: { id: authorId } });
-    if (author?.role === UserRole.AGENT) {
-      await prisma.ticket.update({
-        where: { id: ticketId },
-        data: { firstResponseAt: new Date() },
-      });
-    }
+  // Stamp first response if it's the first response from someone other than the reporter
+  if (authorId !== ticket.reporterId && !ticket.firstResponseAt) {
+    const firstResponseAt = new Date();
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { 
+        firstResponseAt,
+        firstResponseBreached: firstResponseAt > ticket.firstResponseDueAt
+      },
+    });
   }
 
   return comment;
