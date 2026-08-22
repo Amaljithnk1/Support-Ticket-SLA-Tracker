@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "support-ticket-sla-tracker",
   "version": "1.0.0",
   "private": true,
@@ -7,8 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
+    "dev": "bun --cwd apps/api dev & bun --cwd apps/web dev",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\"",
@@ -25,3 +24,5 @@
     "typescript-eslint": "^8.67.0"
   }
 }
+
+
