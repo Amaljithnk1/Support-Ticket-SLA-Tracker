@@ -126,6 +126,7 @@ export const resolvers = {
       const holidays = await context.prisma.holiday.findMany(); // In production, we'd cache this
       const holidayDates = holidays.map((h: any) => h.date);
       const now = new Date();
+      now.setSeconds(0, 0);
       const policy = SLA_POLICIES[parent.priority as any];
 
       const frState = calculateSlaState(parent.firstResponseDueAt, parent.firstResponseAt, now, policy.firstResponseHours * 60, parent.createdAt, timeZone, holidayDates);
