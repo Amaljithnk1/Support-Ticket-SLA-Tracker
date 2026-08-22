@@ -41,6 +41,29 @@ async function main() {
     },
   });
 
+  const agent2 = await prisma.user.upsert({
+    where: { email: 'agent2@example.com' },
+    update: {},
+    create: {
+      email: 'agent2@example.com',
+      name: 'Bob Agent',
+      passwordHash: dummyHash,
+      role: UserRole.AGENT,
+    },
+  });
+
+  const agent3 = await prisma.user.upsert({
+    where: { email: 'agent3@example.com' },
+    update: {},
+    create: {
+      email: 'agent3@example.com',
+      name: 'Charlie Agent',
+      passwordHash: dummyHash,
+      role: UserRole.AGENT,
+    },
+  });
+
+
   // 3. Create Dummy Tickets
   const ticket1 = await prisma.ticket.create({
     data: {
@@ -66,6 +89,7 @@ async function main() {
       priority: Priority.HIGH,
       status: TicketStatus.OPEN,
       reporterId: reporter.id,
+      assigneeId: agent2.id,
       firstResponseDueAt: new Date(Date.now() + 4 * 60 * 60 * 1000), 
       resolutionDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       firstResponseAtRiskAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
@@ -102,6 +126,7 @@ async function main() {
       priority: Priority.URGENT,
       status: TicketStatus.OPEN,
       reporterId: reporter.id,
+      assigneeId: agent3.id,
       createdAt: friday,
       firstResponseDueAt: new Date(friday.getTime() + 1 * 60 * 60 * 1000), // Due in 1 hr
       resolutionDueAt: new Date(friday.getTime() + 4 * 60 * 60 * 1000),
