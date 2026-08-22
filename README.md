@@ -69,6 +69,24 @@ The GraphQL resolvers do not eagerly fetch relations or rely on native Prisma ne
 
 ---
 
+## Status Transition Rules
+To ensure strict ticket lifecycles, the backend enforces the following transition rules:
+- `CLOSED` tickets cannot transition directly back to `IN_PROGRESS` (they must be reopened to `OPEN` first).
+- Tickets marked as `RESOLVED` freeze the SLA Resolution timer. Reopening a resolved ticket does not un-freeze the original deadline clock.
+
+## Environment Variables
+- `DATABASE_URL`: Connection string for PostgreSQL
+- `JWT_SECRET`: Secret key for Argon2/Bcrypt auth tokens
+- `BUSINESS_TIMEZONE`: Timezone for the SLA calculator (e.g. `Asia/Kolkata`)
+
+## How I'd Extend This
+If given more time, I would expand the architecture with:
+1. **SLA Pausing (WAITING_ON_CUSTOMER):** An explicit status that temporarily halts the SLA clock while waiting for user response.
+2. **Event Sourcing:** Creating an `AuditLog` table to historically track every status change for more complex point-in-time SLA reporting.
+3. **Escalation Cron Jobs:** A background worker that automatically flags tickets entering the `AT_RISK` state.
+
+---
+
 ## Testing
 
 This repository includes both pure unit tests (for the math) and end-to-end integration tests (for the API).
