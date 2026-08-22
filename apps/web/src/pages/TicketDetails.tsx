@@ -13,6 +13,7 @@ const TICKET_QUERY = `
       status
       priority
       createdAt
+      firstResponseAt
       reporter {
         name
       }
@@ -31,6 +32,7 @@ const TICKET_QUERY = `
         createdAt
         author {
           name
+          role
         }
       }
     }
@@ -184,8 +186,8 @@ export default function TicketDetails() {
           </div>
           <div>
             <span className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">First Response SLA</span>
-            <span className={`text-sm font-medium ${ticket.sla.firstResponseState === 'BREACHED' ? 'text-red-400' : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'text-emerald-400' : 'text-white')}`}>
-              {ticket.sla.firstResponseState === 'BREACHED' ? 'BREACHED' : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'MET' : `${ticket.sla.firstResponseRemainingMinutes}m left`)}
+            <span className={`text-sm font-medium ${ticket.sla.firstResponseState === 'BREACHED' ? 'text-red-400' : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' || ticket.firstResponseAt ? 'text-emerald-400' : 'text-white')}`}>
+              {ticket.sla.firstResponseState === 'BREACHED' ? 'BREACHED' : (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' || ticket.firstResponseAt ? 'MET' : `${ticket.sla.firstResponseRemainingMinutes}m left`)}
             </span>
           </div>
           <div>
@@ -216,6 +218,11 @@ export default function TicketDetails() {
                   {comment.author.name[0]}
                 </div>
                 <span className="text-sm font-medium text-white">{comment.author.name}</span>
+                {comment.author.role === 'AGENT' && (
+                  <span className="text-[10px] font-bold tracking-widest uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded shadow-sm shadow-blue-500/10">
+                    Agent
+                  </span>
+                )}
                 <span className="text-xs text-zinc-500">{new Date(comment.createdAt).toLocaleString()}</span>
               </div>
               <p className="text-sm text-zinc-300 pl-8 whitespace-pre-wrap">{comment.content}</p>

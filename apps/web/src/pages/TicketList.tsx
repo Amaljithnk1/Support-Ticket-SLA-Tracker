@@ -12,6 +12,7 @@ const TICKETS_QUERY = `
         title
         status
         priority
+        firstResponseAt
         sla {
           firstResponseState
           resolutionState
@@ -133,10 +134,9 @@ export default function TicketList() {
             {tickets.map((ticket: Ticket) => {
               const isBreached = ticket.sla.firstResponseState === 'BREACHED' || ticket.sla.resolutionState === 'BREACHED';
               const isClosed = ticket.status === 'RESOLVED' || ticket.status === 'CLOSED';
-              
               const renderSLA = () => {
                 if (isBreached) return { text: 'BREACHED', style: 'bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20' };
-                if (isClosed) return { text: 'MET', style: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10' };
+                if (isClosed || ticket.firstResponseAt) return { text: 'MET', style: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10' };
                 if (ticket.sla.firstResponseState === 'AT_RISK') return { text: `${ticket.sla.firstResponseRemainingMinutes}m left`, style: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10' };
                 return { text: `${ticket.sla.firstResponseRemainingMinutes}m left`, style: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' };
               };
