@@ -45,7 +45,7 @@ export const resolvers = {
 
       return Array.from(trends.values());
     },
-    tickets: async (_: unknown, args: { status?: string, priority?: string, assigneeId?: string, slaState?: string, take?: number, cursor?: string, orderBy?: string }, context: GraphQLContext) => {
+    tickets: async (_: unknown, args: { status?: TicketStatus, priority?: Priority, assigneeId?: string, slaState?: string, take?: number, cursor?: string, orderBy?: string }, context: GraphQLContext) => {
       requireAuth(context.currentUser);
       const { status, priority, assigneeId, slaState, cursor, orderBy } = args;
       const take = args.take || 10;
