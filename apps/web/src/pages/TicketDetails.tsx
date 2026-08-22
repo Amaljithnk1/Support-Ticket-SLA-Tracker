@@ -39,7 +39,7 @@ const TICKET_QUERY = `
   }
 `;
 
-const RESOLVE_TICKET_MUTATION = `n  mutation ResolveTicket($ticketId: ID!) {
+const RESOLVE_TICKET_MUTATION = `  mutation ResolveTicket($ticketId: ID!) {
     resolveTicket(ticketId: $ticketId) {
       id
       status
@@ -162,6 +162,15 @@ export default function TicketDetails() {
                 Assign to me
               </button>
             )}
+
+              {isAgent && ticket.status === 'IN_PROGRESS' && (
+                <button 
+                  onClick={() => resolveTicket({ ticketId: ticket.id })}
+                  className="px-3 py-1.5 bg-green-500/10 text-green-400 text-sm font-medium rounded hover:bg-green-500/20 transition-colors border border-green-500/20"
+                >
+                  Resolve Ticket
+                </button>
+              )}
             
             {isAgent ? (
               <div className="w-40">

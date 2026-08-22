@@ -82,7 +82,7 @@ export async function assignTicket(prisma: PrismaClient, ticketId: string, assig
 }
 
 export async function resolveTicket(prisma: PrismaClient, ticketId: string) {
-  return changeTicketStatus(prisma, ticketId, 'RESOLVED' as any);
+  return changeTicketStatus(prisma, ticketId, TicketStatus.RESOLVED);
 }
 
 export async function addComment(prisma: PrismaClient, ticketId: string, content: string, authorId: string) {
@@ -110,6 +110,7 @@ export async function addComment(prisma: PrismaClient, ticketId: string, content
 
   return comment;
 }
+
 
 
 

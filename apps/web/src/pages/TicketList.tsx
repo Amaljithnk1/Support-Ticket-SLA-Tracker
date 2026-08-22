@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useQuery } from 'urql';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -110,7 +110,7 @@ export default function TicketList() {
   
   const agentOptions = [
     { value: '', label: 'All Assignees' },
-    ...(agentsData?.users || []).map((u: any) => ({ value: u.id, label: u.name }))
+    ...(agentsData?.users || []).map((u: { id: string; name: string }) => ({ value: u.id, label: u.name }))
   ];
 
   return (
@@ -161,7 +161,7 @@ export default function TicketList() {
             placeholder="All SLA States"
             options={[
               { value: '', label: 'All SLA States' },
-              { value: 'MET', label: 'Met' },
+              
               { value: 'ON_TRACK', label: 'On Track' },
               { value: 'AT_RISK', label: 'At Risk' },
               { value: 'BREACHED', label: 'Breached' }

@@ -108,19 +108,7 @@ export default function Auth() {
             />
           </div>
 
-          {!isLogin && (
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1">Role</label>
-              <CustomSelect 
-                value={role}
-                onChange={setRole}
-                options={[
-                  { value: 'REPORTER', label: 'Reporter (Can create tickets)' },
-                  { value: 'AGENT', label: 'Agent (Can resolve & assign tickets)' }
-                ]}
-              />
-            </div>
-          )}
+          
 
           <button 
             type="submit" 
