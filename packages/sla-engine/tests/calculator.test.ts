@@ -124,7 +124,7 @@ describe('SLA Engine', () => {
 
 
   describe('At-Risk Boundary Calculations', () => {
-    it('computes 75% at-risk thresholds correctly considering business hours', () => {
+    test('computes 75% at-risk thresholds correctly considering business hours', () => {
       const monday9AM = new Date('2026-06-01T13:00:00Z');
       const targets = calculateSlaTargets(monday9AM, 'URGENT', 'America/New_York', []);
       expect(targets.firstResponseAtRiskAt).toEqual(new Date('2026-06-01T13:45:00Z'));
