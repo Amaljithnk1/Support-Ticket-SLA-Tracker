@@ -1,23 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from 'urql';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { CustomSelect } from '../components/ui/CustomSelect';
 
+const GET_AGENTS = `
+  query GetAgents {
+    users(role: AGENT) {
+      id
+      name
+    }
+  }
+`;
+
 const TICKETS_QUERY = `
-  query GetTickets($status: TicketStatus, $priority: Priority, $take: Int, $cursor: String) {
-    tickets(status: $status, priority: $priority, take: $take, cursor: $cursor) {
+  query GetTickets($status: TicketStatus, $priority: Priority, $take: Int, $cursor: String, $assigneeId: ID, $slaState: SLAState, $orderBy: SortOrder) {
+    tickets(status: $status, priority: $priority, take: $take, cursor: $cursor, assigneeId: $assigneeId, slaState: $slaState, orderBy: $orderBy) {
       nodes {
         id
         title
         status
         priority
+        createdAt
         firstResponseAt
         sla {
           firstResponseState
           resolutionState
           firstResponseRemainingMinutes
           resolutionRemainingMinutes
+        }
+        assignee {
+          id
+          name
         }
       }
       pageInfo {
@@ -41,30 +55,63 @@ interface Ticket {
     firstResponseRemainingMinutes: number;
     resolutionRemainingMinutes: number;
   };
+  assignee?: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function TicketList() {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [slaStateFilter, setSlaStateFilter] = useState('');
+  const [assigneeIdFilter, setAssigneeIdFilter] = useState('');
+  const [orderBy, setOrderBy] = useState('');
   
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [allTickets, setAllTickets] = useState<Ticket[]>([]);
+
+  const [{ data: agentsData }] = useQuery({ query: GET_AGENTS });
+
   const [{ data, fetching, error }] = useQuery({ 
     query: TICKETS_QUERY,
     requestPolicy: 'cache-and-network',
     variables: { 
       take: 20,
+      cursor,
       status: statusFilter === '' ? undefined : statusFilter,
-      priority: priorityFilter === '' ? undefined : priorityFilter
+      priority: priorityFilter === '' ? undefined : priorityFilter,
+      assigneeId: assigneeIdFilter === '' ? undefined : assigneeIdFilter,
+      slaState: slaStateFilter === '' ? undefined : slaStateFilter,
+      orderBy: orderBy === '' ? undefined : orderBy,
     }
   });
   
+  useEffect(() => {
+    if (data?.tickets?.nodes) {
+      setAllTickets(prev => 
+        cursor ? [...prev, ...data.tickets.nodes] : data.tickets.nodes
+      );
+    }
+  }, [data, cursor]);
+
+  const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (val: string) => {
+    setter(val);
+    setCursor(null);
+  };
+
   const navigate = useNavigate();
 
   const handleNewTicket = () => {
     document.dispatchEvent(new CustomEvent('open-create-ticket'));
   };
 
-  const tickets = data?.tickets?.nodes || [];
   const pageInfo = data?.tickets?.pageInfo;
+  
+  const agentOptions = [
+    { value: '', label: 'All Assignees' },
+    ...(agentsData?.users || []).map((u: any) => ({ value: u.id, label: u.name }))
+  ];
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
@@ -78,11 +125,11 @@ export default function TicketList() {
         </button>
       </div>
 
-      <div className="flex gap-4">
-        <div className="w-48">
+      <div className="flex flex-wrap gap-4">
+        <div className="w-40">
           <CustomSelect 
             value={statusFilter}
-            onChange={setStatusFilter}
+            onChange={handleFilterChange(setStatusFilter)}
             placeholder="All Statuses"
             options={[
               { value: '', label: 'All Statuses' },
@@ -93,10 +140,10 @@ export default function TicketList() {
             ]}
           />
         </div>
-        <div className="w-48">
+        <div className="w-40">
           <CustomSelect 
             value={priorityFilter}
-            onChange={setPriorityFilter}
+            onChange={handleFilterChange(setPriorityFilter)}
             placeholder="All Priorities"
             options={[
               { value: '', label: 'All Priorities' },
@@ -107,10 +154,44 @@ export default function TicketList() {
             ]}
           />
         </div>
+        <div className="w-40">
+          <CustomSelect 
+            value={slaStateFilter}
+            onChange={handleFilterChange(setSlaStateFilter)}
+            placeholder="All SLA States"
+            options={[
+              { value: '', label: 'All SLA States' },
+              { value: 'MET', label: 'Met' },
+              { value: 'ON_TRACK', label: 'On Track' },
+              { value: 'AT_RISK', label: 'At Risk' },
+              { value: 'BREACHED', label: 'Breached' }
+            ]}
+          />
+        </div>
+        <div className="w-40">
+          <CustomSelect 
+            value={assigneeIdFilter}
+            onChange={handleFilterChange(setAssigneeIdFilter)}
+            placeholder="All Assignees"
+            options={agentOptions}
+          />
+        </div>
+        <div className="w-40">
+          <CustomSelect 
+            value={orderBy}
+            onChange={handleFilterChange(setOrderBy)}
+            placeholder="Sort By"
+            options={[
+              { value: '', label: 'Sort By' },
+              { value: 'CREATED_AT_DESC', label: 'Newest First' },
+              { value: 'CREATED_AT_ASC', label: 'Oldest First' }
+            ]}
+          />
+        </div>
       </div>
 
       <div className="bg-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl relative min-h-[400px]">
-        {fetching && tickets.length === 0 && (
+        {fetching && allTickets.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
             <span className="text-sm text-zinc-400">Loading...</span>
           </div>
@@ -127,15 +208,15 @@ export default function TicketList() {
             <tr className="border-b border-white/10 bg-white/[0.03]">
               <th className="py-4 px-6 text-xs font-semibold text-zinc-400 uppercase tracking-wider">ID</th>
               <th className="py-4 px-6 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Title</th>
-              <th className="py-4 px-6 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</th>
+              <th className="py-4 px-6 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status / Assignee</th>
               <th className="py-4 px-6 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Priority</th>
               <th className="py-4 px-6 text-xs font-semibold text-zinc-400 uppercase tracking-wider">SLA</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {tickets.map((ticket: Ticket) => {
-              const isBreached = ticket.sla.firstResponseState === 'BREACHED' || ticket.sla.resolutionState === 'BREACHED';
-              const isClosed = ticket.status === 'RESOLVED' || ticket.status === 'CLOSED';
+            {allTickets.map((ticket: Ticket) => {
+              const isBreached = ticket.sla.firstResponseState === "BREACHED" || ticket.sla.resolutionState === "BREACHED";
+              const isClosed = ticket.status === "RESOLVED" || ticket.status === "CLOSED";
               const renderSLA = () => {
                 if (isBreached) return { text: 'BREACHED', style: 'bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/20' };
                 if (isClosed || ticket.firstResponseAt) return { text: 'MET', style: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10' };
@@ -161,13 +242,18 @@ export default function TicketList() {
                     {ticket.title}
                   </td>
                   <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border shadow-sm ${
-                      ticket.status === 'OPEN' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-blue-500/10' :
-                      ticket.status === 'IN_PROGRESS' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10' :
-                      'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-                    }`}>
-                      {ticket.status.replace('_', ' ')}
-                    </span>
+                    <div className="flex flex-col gap-1 items-start">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border shadow-sm ${
+                        ticket.status === 'OPEN' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-blue-500/10' :
+                        ticket.status === 'IN_PROGRESS' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10' :
+                        'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                      }`}>
+                        {ticket.status.replace('_', ' ')}
+                      </span>
+                      <span className="text-xs text-zinc-500">
+                        Assignee: {ticket.assignee?.name || 'Unassigned'}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-4 px-6">
                     <span className={`text-sm font-medium ${
@@ -191,8 +277,12 @@ export default function TicketList() {
         
         {pageInfo?.hasNextPage && (
           <div className="p-4 border-t border-white/5 flex justify-center">
-            <button className="text-xs font-medium text-zinc-400 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-md border border-white/10 hover:bg-white/10">
-              Load More (Mocked for demo)
+            <button 
+              onClick={() => setCursor(pageInfo.endCursor)}
+              disabled={fetching}
+              className="text-xs font-medium text-zinc-400 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-md border border-white/10 hover:bg-white/10 disabled:opacity-50"
+            >
+              {fetching ? 'Loading...' : 'Load More'}
             </button>
           </div>
         )}
@@ -200,4 +290,3 @@ export default function TicketList() {
     </div>
   );
 }
-

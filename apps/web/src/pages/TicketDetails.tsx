@@ -39,6 +39,14 @@ const TICKET_QUERY = `
   }
 `;
 
+const RESOLVE_TICKET_MUTATION = `n  mutation ResolveTicket($ticketId: ID!) {
+    resolveTicket(ticketId: $ticketId) {
+      id
+      status
+    }
+  }
+`;
+
 const CHANGE_STATUS_MUTATION = `
   mutation ChangeTicketStatus($ticketId: ID!, $status: TicketStatus!) {
     changeTicketStatus(ticketId: $ticketId, status: $status) {
@@ -82,6 +90,7 @@ export default function TicketDetails() {
     variables: { id } 
   });
 
+  const [, resolveTicket] = useMutation(RESOLVE_TICKET_MUTATION);
   const [, changeStatus] = useMutation(CHANGE_STATUS_MUTATION);
   const [, addComment] = useMutation(ADD_COMMENT_MUTATION);
   const [, assignTicket] = useMutation(ASSIGN_TICKET_MUTATION);
@@ -135,7 +144,7 @@ export default function TicketDetails() {
         onClick={() => navigate('/tickets')}
         className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2"
       >
-        â† Back to Tickets
+        &larr; Back to Tickets
       </button>
 
       <div className="bg-surface/50 border border-white/10 rounded-xl p-6 backdrop-blur-sm shadow-xl">
@@ -255,4 +264,8 @@ export default function TicketDetails() {
     </div>
   );
 }
+
+
+
+
 

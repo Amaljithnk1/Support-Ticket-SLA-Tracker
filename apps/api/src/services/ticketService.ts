@@ -82,20 +82,7 @@ export async function assignTicket(prisma: PrismaClient, ticketId: string, assig
 }
 
 export async function resolveTicket(prisma: PrismaClient, ticketId: string) {
-  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
-  if (!ticket) throw new AppError('Ticket not found', ErrorCode.TICKET_NOT_FOUND);
-  
-  if (ticket.status === TicketStatus.RESOLVED || ticket.status === TicketStatus.CLOSED) {
-    return ticket; // Already resolved
-  }
-
-  return prisma.ticket.update({
-    where: { id: ticketId },
-    data: { 
-      status: TicketStatus.RESOLVED,
-      resolvedAt: new Date() // Freeze SLA
-    },
-  });
+  return changeTicketStatus(prisma, ticketId, 'RESOLVED' as any);
 }
 
 export async function addComment(prisma: PrismaClient, ticketId: string, content: string, authorId: string) {
@@ -123,6 +110,7 @@ export async function addComment(prisma: PrismaClient, ticketId: string, content
 
   return comment;
 }
+
 
 
 

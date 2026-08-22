@@ -18,7 +18,7 @@ export async function register(prisma: PrismaClient, args: Record<string, string
       name: args.name,
       email: args.email,
       passwordHash,
-      role: args.role as UserRole,
+      role: 'REPORTER',
     },
   });
 
@@ -48,5 +48,7 @@ export function verifyToken(token: string) {
     return null;
   }
 }
+
+
 
 
