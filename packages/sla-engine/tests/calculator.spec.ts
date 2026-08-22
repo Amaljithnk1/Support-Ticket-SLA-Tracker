@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'bun:test';
-import { Priority, SLAState } from '../src/config';
-import { calculateSlaTargets, getElapsedBusinessMinutes, calculateSlaState, addBusinessMinutes } from '../src/calculator';
+﻿import { describe, expect, test } from 'bun:test';
+import { SLAState } from '../src/config';
+import { calculateSlaState, addBusinessMinutes } from '../src/calculator';
 
 describe('SLA Engine', () => {
   const TIMEZONE = 'Asia/Kolkata';
@@ -68,7 +68,7 @@ describe('SLA Engine', () => {
       expect(state).toBe(SLAState.AT_RISK);
     });
 
-    test('Freeze: SLA completed on time, now moves far past dueAt later — state must remain frozen ON_TRACK', () => {
+    test('Freeze: SLA completed on time, now moves far past dueAt later â€” state must remain frozen ON_TRACK', () => {
       const createdAt = new Date('2026-08-17T03:30:00Z'); // Mon 09:00
       const dueAt = new Date('2026-08-17T04:30:00Z'); // Mon 10:00
       const actualEventAt = new Date('2026-08-17T04:00:00Z'); // Mon 09:30 (On Time)
@@ -79,7 +79,7 @@ describe('SLA Engine', () => {
       expect(state).toBe(SLAState.ON_TRACK); // Not breached!
     });
 
-    test('Freeze: SLA completed late — state is frozen BREACHED, not AT_RISK', () => {
+    test('Freeze: SLA completed late â€” state is frozen BREACHED, not AT_RISK', () => {
       const createdAt = new Date('2026-08-17T03:30:00Z'); // Mon 09:00
       const dueAt = new Date('2026-08-17T04:30:00Z'); // Mon 10:00
       const actualEventAt = new Date('2026-08-17T05:00:00Z'); // Mon 10:30 (Late)
@@ -91,3 +91,9 @@ describe('SLA Engine', () => {
     });
   });
 });
+
+
+
+
+
+

@@ -1,16 +1,17 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+﻿import { UserRole, TicketStatus, Ticket, Comment, Priority } from '@prisma/client';
 import { requireAuth, requireRole } from './services/authzService';
 import * as authService from './services/authService';
 import * as ticketService from './services/ticketService';
 import { calculateSlaState, getElapsedBusinessMinutes } from '@sla-tracker/sla-engine';
 import { SLA_POLICIES } from '@sla-tracker/sla-engine';
+import type { GraphQLContext } from './server';
 
 export const resolvers = {
   Query: {
-    slaTrend: async (_: any, args: any, context: any) => {
+    slaTrend: async (_: unknown, args: { days: number }, context: GraphQLContext) => {
       requireAuth(context.currentUser);
       const { days } = args;
-      const prisma = context.prisma as PrismaClient;
+      const prisma = context.prisma;
       
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - days);
@@ -19,62 +20,51 @@ export const resolvers = {
         where: { createdAt: { gte: cutoff } },
         orderBy: { createdAt: 'asc' }
       });
-      
-      const trends = new Map<string, { met: number, breached: number }>();
-      const now = new Date();
-      now.setSeconds(0,0);
-      
-      // Pre-fill the last 7 days so the UI chart always has a timeline to draw
+
+      const trends = new Map<string, { date: string; met: number; breached: number }>();
       for (let i = days - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dayStr = d.toLocaleDateString('en-US', { weekday: 'short' });
-        trends.set(dayStr, { met: 0, breached: 0 });
+        trends.set(dayStr, { date: dayStr, met: 0, breached: 0 });
       }
-      
+
+      const now = new Date();
       for (const t of tickets) {
-        const day = new Date(t.createdAt).toLocaleDateString('en-US', { weekday: 'short' });
-        if (!trends.has(day)) continue; // ignore tickets outside the strict boundary
-        const stats = trends.get(day)!;
+        const dayStr = t.createdAt.toLocaleDateString('en-US', { weekday: 'short' });
+        if (!trends.has(dayStr)) continue;
+        const stats = trends.get(dayStr)!;
         
         if (t.resolvedAt) {
           if (t.resolvedAt <= t.resolutionDueAt) stats.met++;
           else stats.breached++;
         } else {
           if (now > t.resolutionDueAt) stats.breached++;
-          // If now <= dueAt, it's pending. Ignore it completely!
         }
       }
-      
-      return Array.from(trends.entries()).map(([date, counts]) => ({
-        date,
-        met: counts.met,
-        breached: counts.breached
-      }));
+
+      return Array.from(trends.values());
     },
-    tickets: async (_: any, args: any, context: any) => {
-      const { status, priority, assigneeId, slaState, orderBy, take = 10, cursor } = args;
-      const prisma = context.prisma as PrismaClient;
-      
-      const where: any = {};
+    tickets: async (_: unknown, args: { status?: string, priority?: string, assigneeId?: string, slaState?: string, take?: number, cursor?: string }, context: GraphQLContext) => {
+      const { status, priority, assigneeId, slaState, cursor } = args;
+      const take = args.take || 10;
+      const prisma = context.prisma;
+
+      const where: Record<string, unknown> = {};
       if (status) where.status = status;
       if (priority) where.priority = priority;
       if (assigneeId) where.assigneeId = assigneeId;
 
-      let dbOrderBy: any = { createdAt: 'desc' };
-      if (orderBy === 'CREATED_AT_ASC') dbOrderBy = { createdAt: 'asc' };
-      if (orderBy === 'CREATED_AT_DESC') dbOrderBy = { createdAt: 'desc' };
-      if (orderBy === 'PRIORITY_DESC') dbOrderBy = { priority: 'desc' };
+      const dbOrderBy: Record<string, unknown> = { createdAt: 'desc' };
 
-      // If we are not filtering by SLA State, we can just use pure DB pagination.
       if (!slaState) {
-        const queryArgs: any = { where, take: take + 1, orderBy: dbOrderBy };
+        const queryArgs: Record<string, unknown> = { where, take: take + 1, orderBy: dbOrderBy };
         if (cursor) {
           queryArgs.cursor = { id: cursor };
-          queryArgs.skip = 1; // skip the cursor itself
+          queryArgs.skip = 1;
         }
         
-        const results = await prisma.ticket.findMany(queryArgs);
+        const results = await prisma.ticket.findMany(queryArgs as Parameters<typeof prisma.ticket.findMany>[0]);
         const hasNextPage = results.length > take;
         const nodes = hasNextPage ? results.slice(0, -1) : results;
         return {
@@ -86,32 +76,29 @@ export const resolvers = {
         };
       }
 
-      // If we ARE filtering by SLA state, we must over-fetch and filter in memory.
-      // We will over-fetch up to take * 5 (Known limitation documented in README).
       const MAX_OVERFETCH = take * 5;
-      const queryArgs: any = { where, take: MAX_OVERFETCH, orderBy: dbOrderBy };
+      const queryArgs: Record<string, unknown> = { where, take: MAX_OVERFETCH, orderBy: dbOrderBy };
       if (cursor) {
         queryArgs.cursor = { id: cursor };
         queryArgs.skip = 1;
       }
 
-      const results = await prisma.ticket.findMany(queryArgs);
+      const results = await prisma.ticket.findMany(queryArgs as Parameters<typeof prisma.ticket.findMany>[0]);
       const timeZone = process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
       const holidays = await prisma.holiday.findMany();
       const holidayDates = holidays.map(h => h.date);
       const now = new Date();
       
       const filtered = results.filter(ticket => {
-        const policy = SLA_POLICIES[ticket.priority as any];
+        const policy = SLA_POLICIES[ticket.priority as keyof typeof SLA_POLICIES];
         const frState = calculateSlaState(ticket.firstResponseDueAt, ticket.firstResponseAt, now, policy.firstResponseHours * 60, ticket.createdAt, timeZone, holidayDates);
         const resState = calculateSlaState(ticket.resolutionDueAt, ticket.resolvedAt, now, policy.resolutionHours * 60, ticket.createdAt, timeZone, holidayDates);
         
-        // Match if EITHER state matches (or we could make it specific in a real app)
         return frState === slaState || resState === slaState;
       });
 
       const nodes = filtered.slice(0, take);
-      const hasNextPage = filtered.length > take; // Roughly estimating if we hit the limit
+      const hasNextPage = filtered.length > take;
 
       return {
         nodes,
@@ -121,14 +108,14 @@ export const resolvers = {
         }
       }
     },
-    ticket: (_: any, args: any, context: any) => context.prisma.ticket.findUnique({ where: { id: args.id } }),
-    users: (_: any, args: any, context: any) => context.prisma.user.findMany({ where: { role: args.role } }),
-    holidays: (_: any, args: any, context: any) => context.prisma.holiday.findMany(),
-    dashboard: async (_: any, args: any, context: any) => {
+    ticket: (_: unknown, args: { id: string }, context: GraphQLContext) => context.prisma.ticket.findUnique({ where: { id: args.id } }),
+    users: (_: unknown, args: { role: UserRole }, context: GraphQLContext) => context.prisma.user.findMany({ where: { role: args.role } }),
+    holidays: (_: unknown, args: Record<string, unknown>, context: GraphQLContext) => context.prisma.holiday.findMany(),
+    dashboard: async (_: unknown, args: Record<string, unknown>, context: GraphQLContext) => {
       const tickets = await context.prisma.ticket.findMany();
       const timeZone = process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
       const holidays = await context.prisma.holiday.findMany();
-      const holidayDates = holidays.map((h: any) => h.date);
+      const holidayDates = holidays.map(h => h.date);
       const now = new Date();
       
       let open = 0, inProgress = 0, atRisk = 0, breached = 0;
@@ -137,7 +124,6 @@ export const resolvers = {
         if (t.status === 'OPEN') open++;
         if (t.status === 'IN_PROGRESS') inProgress++;
         
-        // Calculate dynamic SLA state to power the dashboard metrics
         const firstResponseState = calculateSlaState(t.firstResponseDueAt, t.firstResponseAt, now, t.priority === 'URGENT' ? 60 : t.priority === 'HIGH' ? 240 : t.priority === 'MEDIUM' ? 480 : 1440, t.createdAt, timeZone, holidayDates);
         const resolutionState = calculateSlaState(t.resolutionDueAt, t.resolvedAt, now, t.priority === 'URGENT' ? 240 : t.priority === 'HIGH' ? 1440 : t.priority === 'MEDIUM' ? 2880 : 7200, t.createdAt, timeZone, holidayDates);
         
@@ -148,53 +134,48 @@ export const resolvers = {
         }
       }
       
-      return {
-        openTickets: open,
-        inProgressTickets: inProgress,
-        atRiskTickets: atRisk,
-        breachedTickets: breached,
-      }
+      return { openTickets: open, inProgressTickets: inProgress, atRiskTickets: atRisk, breachedTickets: breached }
     }
   },
   Mutation: {
-    createTicket: async (_: any, args: any, context: any) => {
+    createTicket: async (_: unknown, args: { title: string, description: string, priority: Priority }, context: GraphQLContext) => {
       requireAuth(context.currentUser);
       return ticketService.createTicket(context.prisma, args, context.currentUser.userId);
     },
-    changeTicketStatus: async (_: any, args: any, context: any) => {
+    changeTicketStatus: async (_: unknown, args: { ticketId: string, status: TicketStatus }, context: GraphQLContext) => {
       requireRole(context.currentUser, [UserRole.AGENT]);
       return ticketService.changeTicketStatus(context.prisma, args.ticketId, args.status);
     },
-    assignTicket: async (_: any, args: any, context: any) => {
+    assignTicket: async (_: unknown, args: { ticketId: string, assigneeId: string }, context: GraphQLContext) => {
       requireRole(context.currentUser, [UserRole.AGENT]);
       return ticketService.assignTicket(context.prisma, args.ticketId, args.assigneeId);
     },
-    resolveTicket: async (_: any, args: any, context: any) => {
+    resolveTicket: async (_: unknown, args: { ticketId: string }, context: GraphQLContext) => {
       requireRole(context.currentUser, [UserRole.AGENT]);
       return ticketService.resolveTicket(context.prisma, args.ticketId);
     },
-    addComment: async (_: any, args: any, context: any) => {
+    addComment: async (_: unknown, args: { ticketId: string, content: string }, context: GraphQLContext) => {
       requireAuth(context.currentUser);
       return ticketService.addComment(context.prisma, args.ticketId, args.content, context.currentUser.userId);
     },
-    login: async (_: any, args: any, context: any) => {
+    login: async (_: unknown, args: Record<string, string>, context: GraphQLContext) => {
       return authService.login(context.prisma, args);
     },
-    register: async (_: any, args: any, context: any) => {
+    register: async (_: unknown, args: Record<string, string>, context: GraphQLContext) => {
       return authService.register(context.prisma, args);
     }
   },
   Ticket: {
-    reporter: (parent: any, _: any, context: any) => context.dataloaders.userLoader.load(parent.reporterId),
-    assignee: (parent: any, _: any, context: any) => parent.assigneeId ? context.dataloaders.userLoader.load(parent.assigneeId) : null,
-    comments: (parent: any, _: any, context: any) => context.dataloaders.commentLoader.load(parent.id),
-    sla: async (parent: any, _: any, context: any) => {
+    reporter: (parent: Ticket, _: unknown, context: GraphQLContext) => context.dataloaders.userLoader.load(parent.reporterId),
+    assignee: (parent: Ticket, _: unknown, context: GraphQLContext) => parent.assigneeId ? context.dataloaders.userLoader.load(parent.assigneeId) : null,
+    comments: (parent: Ticket, _: unknown, context: GraphQLContext) => context.dataloaders.commentLoader.load(parent.id),
+    sla: async (parent: Ticket, _: unknown, context: GraphQLContext) => {
       const timeZone = process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
-      const holidays = await context.prisma.holiday.findMany(); // In production, we'd cache this
-      const holidayDates = holidays.map((h: any) => h.date);
+      const holidays = await context.prisma.holiday.findMany();
+      const holidayDates = holidays.map(h => h.date);
       const now = new Date();
       now.setSeconds(0, 0);
-      const policy = SLA_POLICIES[parent.priority as any];
+      const policy = SLA_POLICIES[parent.priority as keyof typeof SLA_POLICIES];
 
       const frState = calculateSlaState(parent.firstResponseDueAt, parent.firstResponseAt, now, policy.firstResponseHours * 60, parent.createdAt, timeZone, holidayDates);
       const resState = calculateSlaState(parent.resolutionDueAt, parent.resolvedAt, now, policy.resolutionHours * 60, parent.createdAt, timeZone, holidayDates);
@@ -211,12 +192,15 @@ export const resolvers = {
         resolutionRemainingMinutes: resRemaining
       };
     },
-    createdAt: (parent: any) => parent.createdAt.toISOString(),
-    firstResponseAt: (parent: any) => parent.firstResponseAt?.toISOString(),
-    resolvedAt: (parent: any) => parent.resolvedAt?.toISOString(),
+    createdAt: (parent: Ticket) => parent.createdAt.toISOString(),
+    firstResponseAt: (parent: Ticket) => parent.firstResponseAt?.toISOString(),
+    resolvedAt: (parent: Ticket) => parent.resolvedAt?.toISOString(),
   },
   Comment: {
-    author: (parent: any, _: any, context: any) => context.dataloaders.userLoader.load(parent.authorId),
-    createdAt: (parent: any) => parent.createdAt.toISOString(),
+    author: (parent: Comment, _: unknown, context: GraphQLContext) => context.dataloaders.userLoader.load(parent.authorId),
+    createdAt: (parent: Comment) => parent.createdAt.toISOString(),
   }
 };
+
+
+

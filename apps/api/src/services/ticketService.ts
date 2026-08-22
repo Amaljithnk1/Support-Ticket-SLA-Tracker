@@ -1,9 +1,9 @@
-import { PrismaClient, TicketStatus, Priority, UserRole } from '@prisma/client';
+﻿import { PrismaClient, TicketStatus, Priority, UserRole, Ticket } from '@prisma/client';
 import { AppError, ErrorCode } from '../errors';
-import { calculateSlaTargets, calculateSlaState, getElapsedBusinessMinutes } from '@sla-tracker/sla-engine';
-import { SLA_POLICIES } from '@sla-tracker/sla-engine';
+import { calculateSlaTargets, calculateSlaTargets } from '@sla-tracker/sla-engine';
 
-export async function createTicket(prisma: PrismaClient, args: any, reporterId: string) {
+
+export async function createTicket(prisma: PrismaClient, args: { title: string, description: string, priority: Priority }, reporterId: string): Promise<Ticket> {
   if (!args.title || args.title.trim() === '') {
     throw new AppError('Title cannot be empty', ErrorCode.VALIDATION_ERROR);
   }
@@ -18,7 +18,8 @@ export async function createTicket(prisma: PrismaClient, args: any, reporterId: 
   const createdAt = new Date();
   
   // Calculate Target SLAs mathematically at creation!
-  const targets = calculateSlaTargets(createdAt, args.priority as any, timeZone, holidayDates);
+  // @ts-expect-error Prisma and the isolated SLA engine use structurally identical but distinct Enums
+  const targets = calculateSlaTargets(createdAt, args.priority, timeZone, holidayDates);
 
   return prisma.ticket.create({
     data: {
@@ -34,13 +35,20 @@ export async function createTicket(prisma: PrismaClient, args: any, reporterId: 
   });
 }
 
-export async function changeTicketStatus(prisma: PrismaClient, ticketId: string, status: TicketStatus) {
+export async function changeTicketStatus(prisma: PrismaClient, ticketId: string, status: TicketStatus): Promise<Ticket> {
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
   if (!ticket) throw new AppError('Ticket not found', ErrorCode.TICKET_NOT_FOUND);
 
-  // Validate state transitions
-  if (ticket.status === TicketStatus.CLOSED && status === TicketStatus.IN_PROGRESS) {
-    throw new AppError('Ticket cannot transition from CLOSED to IN_PROGRESS.', ErrorCode.INVALID_STATUS_TRANSITION);
+  // Strict state machine validation
+  const validTransitions: Record<TicketStatus, TicketStatus[]> = {
+    OPEN: [TicketStatus.IN_PROGRESS],
+    IN_PROGRESS: [TicketStatus.RESOLVED],
+    RESOLVED: [TicketStatus.CLOSED, TicketStatus.IN_PROGRESS],
+    CLOSED: [TicketStatus.OPEN], // Explicit reopen
+  };
+
+  if (!validTransitions[ticket.status].includes(status) && ticket.status !== status) {
+    throw new AppError(`Invalid transition: Cannot move from ${ticket.status} to ${status}.`, ErrorCode.INVALID_STATUS_TRANSITION);
   }
   
   let resolvedAt = ticket.resolvedAt;
@@ -61,7 +69,10 @@ export async function assignTicket(prisma: PrismaClient, ticketId: string, assig
   if (!ticket) throw new AppError('Ticket not found', ErrorCode.TICKET_NOT_FOUND);
 
   const user = await prisma.user.findUnique({ where: { id: assigneeId } });
-  if (!user || user.role !== UserRole.AGENT) {
+  if (!user) {
+    throw new AppError('Assignee not found', ErrorCode.USER_NOT_FOUND);
+  }
+  if (user.role !== UserRole.AGENT) {
     throw new AppError('Assignee must be a valid Agent', ErrorCode.VALIDATION_ERROR);
   }
 
@@ -113,3 +124,6 @@ export async function addComment(prisma: PrismaClient, ticketId: string, content
 
   return comment;
 }
+
+
+

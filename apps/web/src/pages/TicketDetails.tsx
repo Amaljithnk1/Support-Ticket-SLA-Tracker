@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'urql';
 import { toast } from 'sonner';
@@ -135,7 +135,7 @@ export default function TicketDetails() {
         onClick={() => navigate('/tickets')}
         className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2"
       >
-        ← Back to Tickets
+        â† Back to Tickets
       </button>
 
       <div className="bg-surface/50 border border-white/10 rounded-xl p-6 backdrop-blur-sm shadow-xl">
@@ -211,7 +211,7 @@ export default function TicketDetails() {
         <h2 className="text-lg font-medium text-white">Discussion</h2>
         
         <div className="space-y-4">
-          {ticket.comments.map((comment: any) => (
+          {ticket.comments.map((comment: { id: string, content: string, createdAt: string, author: { name: string, role: string } }) => (
             <div key={comment.id} className="bg-surface/30 border border-white/5 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs font-medium text-zinc-300">
@@ -255,3 +255,4 @@ export default function TicketDetails() {
     </div>
   );
 }
+

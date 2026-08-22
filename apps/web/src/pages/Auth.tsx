@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useMutation } from 'urql';
 import { toast } from 'sonner';
 import { CustomSelect } from '../components/ui/CustomSelect';
@@ -59,7 +59,7 @@ export default function Auth() {
       
       toast.success('Successfully authenticated!', { id: loadingToast });
       window.location.href = '/tickets';
-    } catch (err) {
+    } catch {
       toast.error('An unexpected error occurred', { id: loadingToast });
     }
   };
@@ -143,3 +143,4 @@ export default function Auth() {
     </div>
   );
 }
+

@@ -1,11 +1,11 @@
-import * as bcrypt from 'bcryptjs';
+﻿import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AppError, ErrorCode } from '../errors';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
-export async function register(prisma: PrismaClient, args: any) {
+export async function register(prisma: PrismaClient, args: Record<string, string>) {
   const existingUser = await prisma.user.findUnique({ where: { email: args.email } });
   if (existingUser) {
     throw new AppError('Email already in use', ErrorCode.VALIDATION_ERROR);
@@ -18,7 +18,7 @@ export async function register(prisma: PrismaClient, args: any) {
       name: args.name,
       email: args.email,
       passwordHash,
-      role: args.role,
+      role: args.role as UserRole,
     },
   });
 
@@ -26,7 +26,7 @@ export async function register(prisma: PrismaClient, args: any) {
   return { token, user };
 }
 
-export async function login(prisma: PrismaClient, args: any) {
+export async function login(prisma: PrismaClient, args: Record<string, string>) {
   const user = await prisma.user.findUnique({ where: { email: args.email } });
   if (!user) {
     throw new AppError('Invalid email or password', ErrorCode.USER_NOT_FOUND);
@@ -44,7 +44,9 @@ export async function login(prisma: PrismaClient, args: any) {
 export function verifyToken(token: string) {
   try {
     return jwt.verify(token, JWT_SECRET) as { userId: string, role: UserRole };
-  } catch (err) {
+  } catch {
     return null;
   }
 }
+
+

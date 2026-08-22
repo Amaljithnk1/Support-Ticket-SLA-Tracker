@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Ticket, Settings } from 'lucide-react';
+import { LayoutDashboard, Ticket } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { CommandPalette } from '../ui/CommandPalette';
@@ -15,7 +15,7 @@ export function Shell() {
 
   useEffect(() => {
     if (navigator.platform.toLowerCase().includes('mac')) {
-      setShortcut('⌘K');
+      setShortcut('âŒ˜K');
     }
   }, []);
 
@@ -81,3 +81,4 @@ export function Shell() {
     </div>
   );
 }
+

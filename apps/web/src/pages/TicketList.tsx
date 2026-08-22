@@ -32,7 +32,9 @@ interface Ticket {
   id: string;
   title: string;
   status: string;
-  priority: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  createdAt: string;
+  firstResponseAt?: string;
   sla: {
     firstResponseState: string;
     resolutionState: string;
@@ -198,3 +200,4 @@ export default function TicketList() {
     </div>
   );
 }
+

@@ -7,13 +7,21 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun --cwd apps/api dev & bun --cwd apps/web dev",
+    "dev": "turbo dev",
+    "build": "turbo build",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p apps/api/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
+    "eslint": "^10.9.0",
     "prettier": "^3.0.3",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.67.0"
   }
 }
